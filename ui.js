@@ -17,6 +17,9 @@ function modelOptions(sel){ return Object.entries(GAUGES).map(([g,gn])=>`<optgro
 const pct=x=>Math.round(x*100)+' %';
 const lineName=L=>stationName(L.a)+' ⇄ '+stationName(L.b);
 function msg(t){ UI.msg=t||''; }
+/* confirmation dans la page (les boîtes confirm() sont bloquées dans certains lecteurs) : 1er clic arme le bouton, 2e clic valide */
+function armed(b,label){ if(b.dataset.armed==='1') return true; b.dataset.armed='1'; b.dataset.old=b.textContent; b.textContent=label||'Cliquez encore pour confirmer';
+  setTimeout(()=>{ if(b.isConnected){ b.dataset.armed=''; b.textContent=b.dataset.old; } },4000); return false; }
 
 /* ---------- en-tête ---------- */
 const SPEEDS=[[0,'⏸'],[1,'×1'],[60,'×60'],[600,'×600'],[3600,'1 h/s'],[86400,'1 j/s']];
@@ -196,7 +199,7 @@ const ACTIONS={
   openfrom:b=>{ UI.open.a=b.dataset.v; UI.tab='open'; UI.sel=null; },
   buildfrom:b=>{ UI.build.a=b.dataset.v; UI.tab='works'; UI.sel=null; },
   openline:()=>{ const f=UI.open, e=openLine(f.a,f.b,f.model,f.stopMode,f.weekly,f.hour,f.tariff); msg(e||'✅ Ligne ouverte : '+stationName(f.a)+' ⇄ '+stationName(f.b)); if(!e){ UI.tab='lines'; drawLines(); } },
-  close:b=>{ if(!confirm('Fermer cette ligne ? Les rames sont revendues à 60 %.')) return 'noPanel'; closeLine(+b.dataset.v); UI.sel=null; drawLines(); },
+  close:b=>{ if(!armed(b,'Confirmer la fermeture ?')) return 'noPanel'; closeLine(+b.dataset.v); UI.sel=null; drawLines(); },
   zoomline:b=>{ const L=lineById(+b.dataset.v), r=L&&routeOf(L); if(r) map.fitBounds(r.out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]),{padding:[30,30]}); return 'noPanel'; },
   work:b=>{ const e=startWork(b.dataset.k,b.dataset.v,b.dataset.o); msg(e||'🏗️ Chantier lancé.'); drawNet(); },
   build:()=>{ const b=UI.build, e=startBuild(b.a,b.b,b.g,b.v,b.el,b.dbl); msg(e||'🏗️ Construction lancée.'); drawNet(); },
@@ -267,7 +270,7 @@ function showNewGame(cancelable){ const d=$('#modal'); d.innerHTML=`<div class="
   <label>Premier hub<select id="ng-hub">${START_HUBS.map(c=>`<option value="${c}">${esc(stationName(c))} (${esc(COUNTRIES[STATIONS[c].c][0])})</option>`).join('')}</select></label>
   <label>Difficulté<select id="ng-cash"><option value="300000000">Facile — 300 M$</option><option value="150000000" selected>Normale — 150 M$</option><option value="60000000">Difficile — 60 M$</option></select></label>
   <div class="row"><button class="primary" id="ng-go">Commencer</button>${cancelable?'<button id="ng-x">Annuler</button>':''}</div></div>`; d.hidden=false;
-  $('#ng-go').onclick=()=>{ if(cancelable&&!confirm('Effacer la partie en cours ?')) return; newGame($('#ng-name').value.trim()||'Congo Rail',$('#ng-hub').value,+$('#ng-cash').value); d.hidden=true; UI.tab='home'; UI.sel=null; UI.open.a=S.hubs[0]; focusStation(S.hubs[0]); fullRedraw(); };
+  $('#ng-go').onclick=()=>{ if(cancelable&&!armed($('#ng-go'),'Effacer la partie en cours ?')) return; newGame($('#ng-name').value.trim()||'Congo Rail',$('#ng-hub').value,+$('#ng-cash').value); d.hidden=true; UI.tab='home'; UI.sel=null; UI.open.a=S.hubs[0]; focusStation(S.hubs[0]); fullRedraw(); };
   if(cancelable) $('#ng-x').onclick=()=>{ d.hidden=true; }; }
 
 /* ---------- démarrage et boucle ---------- */
