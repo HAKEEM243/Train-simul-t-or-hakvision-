@@ -38,7 +38,7 @@ G.advance(30*7*86400e3); ok(G.shortestPath('KIN','PNR',G.MODELS.PAX_C),'Kinshasa
 // sauvegarde / rechargement
 G.save(); const t=G.S.time; G.S=null; ok(G.load()&&G.S.time===t,'sauvegarde rechargée');
 // rattrapage hors-ligne
-store['congo-rail-lr']=String(Date.now()-3*3600e3); G.S.lastReal=Date.now()-3*3600e3; const tt=G.S.time; G.catchUp(); ok(G.S.time-tt>=3*3600e3-1000,'rattrapage de 3 h');
+store['hakvision-rail-lr']=String(Date.now()-3*3600e3); G.S.lastReal=Date.now()-3*3600e3; const tt=G.S.time; G.catchUp(); ok(G.S.time-tt>=3*3600e3-1000,'rattrapage de 3 h');
 // performance : rattrapage de 30 jours
 const t0=Date.now(); G.advance(30*86400e3); console.log('   30 jours simulés en',Date.now()-t0,'ms');
 console.log(fails?fails+' échec(s)':'TOUS LES TESTS PASSENT'); process.exit(fails?1:0);

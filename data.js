@@ -1,5 +1,5 @@
 /* =========================================================
-   Congo Rail Empire — données du monde
+   Hakvision Rail — données du monde
    Coordonnées : approximatives (centre-ville), populations : agglomérations en millions (ordre de grandeur).
    Voies : tracés réels simplifiés (une arête = un tronçon entre deux gares). Vitesses et états : estimés pour le jeu.
    ========================================================= */

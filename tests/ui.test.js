@@ -31,7 +31,7 @@ const srv=http.createServer((q,r)=>{ const f=path.join(ROOT,decodeURIComponent(q
     const st=await p.evaluate(()=>({t:S.time,cash:S.cash,hist:S.hist.length}));
     ok(st.t>Date.UTC(2026,0,7),tag+' le temps avance : '+new Date(st.t).toISOString());
     // rechargement réel de la page + absence simulée de 6 h
-    await p.evaluate(()=>{ S.paused=false; save(); localStorage.setItem('congo-rail-lr',String(Date.now()-6*3600e3)); const o=JSON.parse(localStorage.getItem('congo-rail-save')); o.lastReal=Date.now()-6*3600e3; localStorage.setItem('congo-rail-save',JSON.stringify(o)); window.__noSave=1; });
+    await p.evaluate(()=>{ S.paused=false; save(); localStorage.setItem('hakvision-rail-lr',String(Date.now()-6*3600e3)); const o=JSON.parse(localStorage.getItem('hakvision-rail-save')); o.lastReal=Date.now()-6*3600e3; localStorage.setItem('hakvision-rail-save',JSON.stringify(o)); window.__noSave=1; });
     await p.evaluate(()=>{ S._noSave=true; }); await p.reload(); await p.waitForTimeout(800);
     const after=await p.evaluate(()=>({t:S.time,lines:S.lines.length,news:S.news[0].txt}));
     ok(after.lines===1&&after.t>=st.t+6*3600e3-60e3,tag+' rattrapage après rechargement : '+after.news);

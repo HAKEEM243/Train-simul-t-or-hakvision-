@@ -3,7 +3,22 @@
    ========================================================= */
 'use strict';
 const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const APP_V='1.0.0';
+const APP_V='1.1.0';
+/* ---------- sauvegarde en ligne (page claude.ai : base de données privée de chaque joueur) ---------- */
+const CLOUD={ref:null,busy:false,at:0,err:'',checked:false,dl:null};
+async function cloudInit(){
+  try{ if(!window.claude||!window.claude.use) return null;
+    const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]); window.claude.use('downloads').then(d=>{ CLOUD.dl=d; }).catch(()=>{});
+    if(!db||!user) return null; const id=await user.id(); if(!id) return null;
+    CLOUD.ref=db.doc('data/users/'+id+'/saves/main'); const snap=await CLOUD.ref.get();
+    if(!snap.exists) return null; const d=snap.data(); return d&&d.json?JSON.parse(d.json):null;
+  }catch(e){ CLOUD.err=e&&e.code||'erreur'; return null; } }
+async function cloudSave(){ if(!CLOUD.ref||CLOUD.busy||!S) return; CLOUD.busy=true;
+  try{ await CLOUD.ref.set({json:JSON.stringify(S),at:Date.now(),v:SAVE_V,name:S.name}); CLOUD.at=Date.now(); CLOUD.err=''; }
+  catch(e){ CLOUD.err=(e&&e.code)||'erreur'; } CLOUD.busy=false; renderSaved(); }
+function saveAll(){ save(); cloudSave(); renderSaved(); }
+function renderSaved(){ const el=$('#saved'); if(!el) return; const t=Math.max(CLOUD.at,SAVE_INFO.at);
+  el.textContent=CLOUD.err?'⚠️ sauvegarde en ligne : '+CLOUD.err:t?'💾 '+(CLOUD.at?'sauvegardé en ligne':'sauvegardé')+' '+new Date(t).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'}):'⚠️ pas encore sauvegardé'; }
 const UI={rank:'AF',tab:'home',sel:null,msg:'',open:{a:null,b:null,model:'PAX_C',stopMode:'express',weekly:7,hour:6,tariff:1},
   build:{a:'KIN',b:'BZV',g:'C',v:100,el:false,dbl:false},showRivals:true,netVer:-1,timetable:null};
 let map,layers={},trainMk=new Map(),rivalMk=new Map();
@@ -61,9 +76,9 @@ function viewHome(){
     <li>Accélérez le temps en haut à droite. Le jeu continue (et vous rapporte) même fermé.</li></ol>`);
   h+=card('🚆 Vos lignes',S.lines.length?S.lines.map(lineRow).join(''):'<div class="mut">Aucune ligne pour l\'instant.</div>');
   h+=card('📰 Dernières nouvelles',newsList(5)+`<button data-act="tab" data-v="news">Tout voir</button>`);
-  h+=card('💾 Partie',`<div class="row"><button data-act="export">Exporter</button><button data-act="import">Importer</button><button data-act="newgame" class="danger">Nouvelle partie</button></div>
+  h+=card('💾 Partie',`<div class="row"><button data-act="savenow">💾 Sauvegarder</button><button data-act="export">Exporter</button><button data-act="import">Importer</button><button data-act="newgame" class="danger">Nouvelle partie</button></div>
     <label class="mut"><input type="checkbox" data-act="rivals" ${UI.showRivals?'checked':''}> Afficher les trains concurrents</label>
-    <div class="mut">Version ${APP_V} · sauvegarde automatique dans ce navigateur.</div>`);
+    <div class="mut">Version ${APP_V} · sauvegarde automatique toutes les 15 s${CLOUD.ref?' dans votre compte (vous retrouvez la partie sur tous vos appareils)':SAVE_INFO.local?' dans ce navigateur':''}.${!CLOUD.ref&&!SAVE_INFO.local?' <span class="neg">Ce navigateur bloque la sauvegarde : utilisez Exporter.</span>':''}</div>`);
   return h;
 }
 function lineRow(L){ const e=econOf(L), last=S.hist.at(-1), lw=last&&last.lines[L.id], m=MODELS[L.model];
@@ -209,17 +224,21 @@ const ACTIONS={
   borrow:b=>{ msg(borrow(+b.dataset.v)||'🏦 Emprunt accordé.'); },
   repay:b=>{ msg(repay(+b.dataset.v)||'Remboursé.'); },
   rivals:b=>{ UI.showRivals=b.checked; for(const m of rivalMk.values()) map.removeLayer(m); rivalMk.clear(); return 'noPanel'; },
-  export:()=>{ const blob=new Blob([JSON.stringify(S)],{type:'application/json'}), a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='congo-rail-'+new Date(S.time).toISOString().slice(0,10)+'.json'; a.click(); return 'noPanel'; },
-  import:()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json'; i.onchange=()=>{ const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); if(o.v!==SAVE_V) throw 0; S=o; S.lastReal=Date.now(); rtDirty(); save(); msg('Partie importée.'); fullRedraw(); }catch(e){ msg('Fichier invalide.'); renderPanel(); } }; r.readAsText(i.files[0]); }; i.click(); return 'noPanel'; },
+  savenow:()=>{ saveAll(); msg('💾 Partie sauvegardée.'); },
+  export:()=>{ const name='hakvision-rail-'+new Date(S.time).toISOString().slice(0,10)+'.json', data=JSON.stringify(S);
+    if(CLOUD.dl){ CLOUD.dl.save({filename:name,data}).catch(()=>{}); return 'noPanel'; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.download=name; a.click(); return 'noPanel'; },
+  import:()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json'; i.onchange=()=>{ const r=new FileReader(); r.onload=()=>{ try{ const o=JSON.parse(r.result); if(o.v!==SAVE_V) throw 0; S=o; S.lastReal=Date.now(); rtDirty(); saveAll(); msg('Partie importée.'); fullRedraw(); }catch(e){ msg('Fichier invalide.'); renderPanel(); } }; r.readAsText(i.files[0]); }; i.click(); return 'noPanel'; },
   newgame:()=>{ showNewGame(true); return 'noPanel'; }
 };
 function onAct(e){ const b=e.target.closest('[data-act]'); if(!b) return; if(b.tagName==='A') e.preventDefault(); if(b.type==='checkbox'&&e.type==='click') { /* traité au change */ }
-  const r=ACTIONS[b.dataset.act]&&ACTIONS[b.dataset.act](b); if(r!=='noPanel'){ renderPanel(); renderTop(); } if(UI.sel) $('#panel').scrollTop=0; }
+  const r=ACTIONS[b.dataset.act]&&ACTIONS[b.dataset.act](b); if(r!=='noPanel'){ renderPanel(); renderTop(); }
+  if(['openline','close','hub','work','build','project','borrow','repay'].includes(b.dataset.act)) saveAll(); if(UI.sel) $('#panel').scrollTop=0; }
 function onField(e){ const t=e.target;
   if(t.dataset.f){ const [o,k]=t.dataset.f.split('.'), obj=UI[o]; let v=t.type==='checkbox'?t.checked:t.value; if(['weekly','hour','v'].includes(k)||k==='tariff') v=+v; obj[k]=v;
     if(o==='open'&&k==='tariff'){ t.previousElementSibling&&(t.closest('label').querySelector('b').textContent=pct(v)); updatePreview(); return; }
     renderPanel(); return; }
-  if(t.dataset.lf){ const id=+t.dataset.id, k=t.dataset.lf; let v=t.value; if(k!=='stopMode') v=+v; const err=setLine(id,{[k]:v}); msg(err||''); renderPanel(); renderTop(); drawLines(); }
+  if(t.dataset.lf){ const id=+t.dataset.id, k=t.dataset.lf; let v=t.value; if(k!=='stopMode') v=+v; const err=setLine(id,{[k]:v}); msg(err||''); renderPanel(); renderTop(); drawLines(); saveAll(); }
 }
 
 /* ---------- carte ---------- */
@@ -264,20 +283,27 @@ function updateTrains(){ const t=S.time, seen=new Set(), bounds=map.getBounds().
 function fullRedraw(){ for(const m of trainMk.values()) layers.trains.removeLayer(m); trainMk.clear(); for(const m of rivalMk.values()) layers.trains.removeLayer(m); rivalMk.clear(); drawNet(); renderTop(); renderPanel(); }
 
 /* ---------- nouvelle partie ---------- */
-function showNewGame(cancelable){ const d=$('#modal'); d.innerHTML=`<div class="box"><h2>🚆 Congo Rail Empire</h2>
+function showNewGame(cancelable){ const d=$('#modal'); d.innerHTML=`<div class="box"><h2>🚆 Hakvision Rail</h2>
   <p>Bâtissez la grande compagnie ferroviaire du Congo — puis du monde. Rénovez les vieilles lignes, construisez les chaînons manquants, transportez voyageurs et minerais.</p>
-  <label>Nom de votre compagnie<input id="ng-name" value="Congo Rail" maxlength="40"></label>
+  <label>Nom de votre compagnie<input id="ng-name" value="Hakvision Rail" maxlength="40"></label>
   <label>Premier hub<select id="ng-hub">${START_HUBS.map(c=>`<option value="${c}">${esc(stationName(c))} (${esc(COUNTRIES[STATIONS[c].c][0])})</option>`).join('')}</select></label>
   <label>Difficulté<select id="ng-cash"><option value="300000000">Facile — 300 M$</option><option value="150000000" selected>Normale — 150 M$</option><option value="60000000">Difficile — 60 M$</option></select></label>
   <div class="row"><button class="primary" id="ng-go">Commencer</button>${cancelable?'<button id="ng-x">Annuler</button>':''}</div></div>`; d.hidden=false;
-  $('#ng-go').onclick=()=>{ if(cancelable&&!armed($('#ng-go'),'Effacer la partie en cours ?')) return; newGame($('#ng-name').value.trim()||'Congo Rail',$('#ng-hub').value,+$('#ng-cash').value); d.hidden=true; UI.tab='home'; UI.sel=null; UI.open.a=S.hubs[0]; focusStation(S.hubs[0]); fullRedraw(); };
+  $('#ng-go').onclick=()=>{ if(cancelable&&!armed($('#ng-go'),'Effacer la partie en cours ?')) return; newGame($('#ng-name').value.trim()||'Hakvision Rail',$('#ng-hub').value,+$('#ng-cash').value); saveAll(); d.hidden=true; UI.tab='home'; UI.sel=null; UI.open.a=S.hubs[0]; focusStation(S.hubs[0]); fullRedraw(); };
   if(cancelable) $('#ng-x').onclick=()=>{ d.hidden=true; }; }
 
 /* ---------- démarrage et boucle ---------- */
-function boot(){ initMap(); const fresh=!S; if(fresh) newGame('Congo Rail','KIN',150e6);
+function boot(){ initMap(); const fresh=!S; if(fresh){ newGame('Hakvision Rail','KIN',150e6); S._fresh=true; try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }   // partie provisoire, jamais sauvegardée
   document.addEventListener('click',onAct); document.addEventListener('change',onField);
   document.addEventListener('input',e=>{ if(e.target.type==='range') onField(e); });
-  fullRedraw(); if(fresh) showNewGame(false);
+  fullRedraw(); renderSaved();
+  if(fresh){ $('#modal').innerHTML='<div class="box"><h2>🚆 Hakvision Rail</h2><p>Recherche de votre sauvegarde…</p></div>'; $('#modal').hidden=false; }
+  // sauvegarde en ligne : on la reprend si elle est plus récente que celle du navigateur
+  cloudInit().then(o=>{ CLOUD.checked=true;
+    if(o&&o.v===SAVE_V&&(fresh||(o.savedAt||0)>(S.savedAt||0))){ adopt(o); catchUp(); $('#modal').hidden=true; UI.sel=null; fullRedraw(); msg('💾 Partie reprise ('+fmtLocal(S.time,1).slice(0,15)+').'); renderPanel(); save(); }
+    else if(fresh) showNewGame(false);
+    else cloudSave();
+    renderSaved(); });
   let last=performance.now(), wall=Date.now(), lastPanel=0;
   setInterval(()=>{ const now=performance.now(), w=Date.now(), gap=w-wall; wall=w;
     if(gap>15000&&!S.paused){ catchUp(); last=now; renderPanel(); }                                 // appli gelée (téléphone en veille) : on rattrape
@@ -286,7 +312,7 @@ function boot(){ initMap(); const fresh=!S; if(fresh) newGame('Congo Rail','KIN'
     renderTop(); updateTrains();
     const busy=document.activeElement&&['SELECT','INPUT'].includes(document.activeElement.tagName);
     if(!busy&&now-lastPanel>3000&&(UI.tab==='home'||UI.tab==='works'||UI.tab==='fin'||UI.tab==='news')&&!UI.sel&&!$('#panel').matches(':hover')){ lastPanel=now; renderPanel(); } },250);
-  setInterval(save,8000); document.addEventListener('visibilitychange',()=>{ if(document.hidden) save(); else if(!S.paused){ catchUp(); renderPanel(); } });
-  window.addEventListener('pagehide',save); }
+  setInterval(()=>{ if(!S._fresh) saveAll(); },15000); document.addEventListener('visibilitychange',()=>{ if(document.hidden){ if(!S._fresh) saveAll(); } else if(!S.paused){ catchUp(); renderPanel(); } });
+  window.addEventListener('pagehide',()=>{ if(!S._fresh) save(); }); }
 if(load()) catchUp();
 window.addEventListener('DOMContentLoaded',boot);

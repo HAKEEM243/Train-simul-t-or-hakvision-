@@ -1,4 +1,4 @@
-# 🚆 Congo Rail Empire
+# 🚆 Hakvision Rail
 
 Jeu de gestion ferroviaire dans le navigateur (HTML + JavaScript, sans compilation) : bâtissez la grande compagnie de chemin de fer
 du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au monde.

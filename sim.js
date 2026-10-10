@@ -3,22 +3,26 @@
    Principe : la position d'un train est une FONCTION DU TEMPS (calculée depuis l'horaire).
    ========================================================= */
 'use strict';
-const SAVE_KEY='congo-rail-save', LR_KEY='congo-rail-lr', SAVE_V=1;
+const SAVE_KEY='hakvision-rail-save', LR_KEY='hakvision-rail-lr', OLD_KEYS=['congo-rail-save'], SAVE_V=1;
+let SAVE_INFO={local:false,at:0};   // état de la sauvegarde, affiché dans l'interface
 const TURN={pax:40*MIN,frt:3*HOUR};                       // temps de retournement au terminus
 const LINE_COLORS=['#ffd60a','#4cc9f0','#f72585','#80ed99','#ff9f1c','#b388ff','#ff595e','#00f5d4','#e9c46a','#90e0ef'];
 let S=null;
 
 /* ---------- état ---------- */
 function newGame(name,hub,cash){
-  S={v:SAVE_V,name:name||'Congo Rail',time:Date.UTC(2026,0,5,4,0),start:Date.UTC(2026,0,5),cash:cash||150e6,debt:0,speed:600,paused:false,
+  S={v:SAVE_V,name:name||'Hakvision Rail',time:Date.UTC(2026,0,5,4,0),start:Date.UTC(2026,0,5),cash:cash||150e6,debt:0,speed:600,paused:false,
      lastReal:Date.now(),hubs:[hub||'KIN'],lines:[],seq:1,net:{mods:{},built:[]},works:[],news:[],hist:[],
      wk:newWeek(),incidents:[],rivals:{extra:[],mul:{}},metal:1,lastWeek:0,tolls:0};
   addNews('🎉 '+S.name+' est fondée à '+STATIONS[S.hubs[0]].n+' avec '+fmtMoney(S.cash)+' de capital.','me');
   rtDirty(); save();
 }
 const newWeek=()=>({rev:0,cost:0,pax:0,tons:0,trips:0,fixed:0,lines:{}});
-function save(){ if(!S||S._noSave) return; S.lastReal=Date.now(); try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); localStorage.setItem(LR_KEY,String(Date.now())); }catch(e){} }
-function load(){ try{ const o=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if(o&&o.v===SAVE_V){ S=o; rtDirty(); return true; } }catch(e){} return false; }
+// sauvegarde locale (navigateur) ; la sauvegarde en ligne (compte claude.ai) est gérée dans ui.js
+function save(){ if(!S||S._noSave) return; S.lastReal=Date.now(); S.savedAt=Date.now();
+  try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); localStorage.setItem(LR_KEY,String(Date.now())); SAVE_INFO.local=true; SAVE_INFO.at=Date.now(); }catch(e){ SAVE_INFO.local=false; } }
+function adopt(o){ if(!o||o.v!==SAVE_V||!o.lines) return false; S=o; if(S.hist&&S.hist.length>52) S.hist=S.hist.slice(-52); rtDirty(); return true; }
+function load(){ for(const k of [SAVE_KEY,...OLD_KEYS]){ try{ const o=JSON.parse(localStorage.getItem(k)||'null'); if(adopt(o)) return true; }catch(e){} } return false; }
 function addNews(txt,kind){ S.news.unshift({t:S.time,txt,kind:kind||'info'}); if(S.news.length>120) S.news.length=120; }
 
 /* ---------- caches recalculés (jamais sauvegardés) ---------- */
@@ -207,7 +211,7 @@ function weeklyTick(){
   let toll=0; for(const L of RT.rivals){ const r=routeOf(L); if(!r) continue; for(const e of r.out.edges) if(e.own) toll+=e.km*regionOf(e.a).toll*2*L.weekly; }
   S.cash+=toll; S.wk.tolls=toll;
   S.hist.push({t:weekStart(S.time)-WEEK,rev:S.wk.rev,cost:S.wk.cost+fixed,pax:S.wk.pax,tons:S.wk.tons,cash:S.cash,tolls:toll,lines:S.wk.lines});
-  if(S.hist.length>104) S.hist.shift();
+  if(S.hist.length>52) S.hist.shift();
   const res=S.wk.rev+toll-S.wk.cost-fixed; S.wk=newWeek();
   if(S.cash<-30e6) addNews('🚨 Trésorerie négative ('+fmtMoney(S.cash)+') : empruntez, fermez des lignes ou augmentez les tarifs.','bad');
   S.incidents=S.incidents.filter(i=>i.until>S.time);
