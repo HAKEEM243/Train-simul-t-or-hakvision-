@@ -29,12 +29,17 @@ const srv=http.createServer((q,r)=>{ const u=decodeURIComponent(q.url.split('?')
     ok(await f.evaluate(()=>document.querySelectorAll('.tm.enroute').length===1),tag+' train sur la carte'); await p.screenshot({path:`${OUT}/tm-${tag}-4-carte.png`});
     const cash=await f.evaluate(()=>G.cash); await f.evaluate(()=>{ G.trains[0].dep-=20*60e3; }); await f.waitForTimeout(900);
     ok(await f.evaluate(c=>G.cash>c&&G.trains[0].state==='station',cash),tag+' arrivée et recette');
+    await f.click('#hex [data-v=world]'); await f.waitForSelector('.regions'); await p.screenshot({path:`${OUT}/tm-${tag}-6-monde.png`});
+    await f.evaluate(()=>{ G.cash=3e6; }); await f.click('.regions button:nth-child(6)'); await f.waitForTimeout(300);
+    await f.evaluate(()=>openModal('station','PAR')); await f.click('[data-act=hub][data-v=PAR]'); await f.waitForTimeout(300);
+    ok(await f.evaluate(()=>G.hubs.includes('PAR')&&document.querySelectorAll('.hubmk').length>=2),tag+' hub établi à Paris, étoiles sur la carte');
+    await f.evaluate(()=>closeModal()); await p.screenshot({path:`${OUT}/tm-${tag}-7-europe.png`});
     for(const m of ['check','shop','company','fuel','finance','service','mail','settings']){ await f.evaluate(n=>openModal(n),m); await f.waitForTimeout(80); if(m==='fuel'||m==='check') await p.screenshot({path:`${OUT}/tm-${tag}-5-${m}.png`}); }
     ok(true,tag+' toutes les fenêtres s\'ouvrent');
     await f.evaluate(()=>closeModal()); await f.click('#hex [data-v=yard]'); await f.click('[data-act=mtab][data-v=buy]'); await f.click('[data-act=buy][data-v=MAY3]'); await f.waitForTimeout(200);
     ok(await f.evaluate(()=>G.trains.length===2),tag+' commande d\'un train');
-    if(!single){ await f.evaluate(()=>saveAll()); await p.reload(); await p.waitForTimeout(1500);
-      ok(await p.evaluate(()=>G.trains.length===2&&G.routes.length===1&&!G._fresh),tag+' partie reprise après rechargement'); }
+    if(!single){ await f.evaluate(()=>saveAll()); const hubs=await f.evaluate(()=>G.hubs.length); await p.reload(); await p.waitForTimeout(1500);
+      ok(await p.evaluate(n=>G.trains.length===2&&G.routes.length===1&&G.hubs.length===n&&!G._fresh,hubs),tag+' partie reprise après rechargement'); }
     await ctx.close(); }
   ok(errs.length===0,'aucune erreur JS '+errs.join(' | '));
   await b.close(); srv.close(); console.log(fails?fails+' échec(s)':'TOUS LES TESTS UI PASSENT'); process.exit(fails?1:0); })();

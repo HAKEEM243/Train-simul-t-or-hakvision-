@@ -17,11 +17,18 @@ function newGame(name,start){
   G={v:SAVE_V,name:name||'Hakvision Rail',start:start||'KIN',cash:400000,points:200,xp:0,level:1,
      fuel:15000,fuelCap:30000,energy:20000,energyCap:60000,slots:8,scale:30,
      trains:[],routes:[],seq:1,routeSeq:0,stats:{trips:0,pax:0,tons:0,rev:0,km:0,repairs:0,fuelBuys:0,stations:[]},
-     ledger:[],mail:[],claimed:{},priceHist:[],debt:0,lastDaily:0,created:t,lastSeen:t};
-  addTrain('KT12','yard');
-  mail('Bienvenue chez '+G.name+' !','Votre premier train, un Kasaï KT-12, vous attend au dépôt. Ouvrez le DÉPÔT → ITINÉRAIRES pour créer votre première ligne, par exemple Kinshasa ⇄ Matadi, puis faites partir le train depuis la liste « À la gare ».');
+     ledger:[],mail:[],claimed:{},priceHist:[],debt:0,lastDaily:0,created:t,lastSeen:t,hubs:[start||'KIN']};
+  addTrain(starterModel(G.start),'yard');
+  mail('Bienvenue chez '+G.name+' !','Votre premier hub est à '+stationName(G.start)+' et votre premier train ('+MODELS[G.trains[0].model].name+') vous attend au dépôt. Ouvrez le DÉPÔT → ITINÉRAIRES pour créer une ligne depuis votre hub, puis faites partir le train depuis la liste « À la gare ». Établissez des hubs partout dans le monde pour y ouvrir des lignes.');
   G.lastDaily=Math.floor(t/864e5); return G;
 }
+/* ---------- hubs : chaque ligne part d'un hub ---------- */
+function gaugesAt(c){ net(); return new Set(NET.adj[c].filter(e=>!e.hs&&!e.ferry).map(e=>e.g)); }
+function starterModel(c){ const g=gaugesAt(c); return g.has('C')?'KT12':g.has('S')?'HIR1':g.has('B')?'GAN2':g.has('R')?'VOL2':g.has('M')?'UBM':'KT12'; }
+function hubCost(c){ const R=regionOf(c); return Math.round(R.hub*60000*(1+STATIONS[c].p/8)/1000)*1000; }
+function buyHub(c){ if(G.hubs.includes(c)) return 'C\'est déjà un de vos hubs.'; net(); if(!NET.adj[c].filter(e=>!e.hs).length) return 'Pas de voie ferrée en service dans cette ville.';
+  const k=hubCost(c); if(G.cash<k) return 'Il faut '+fmt$(k)+' pour établir ce hub.'; G.cash-=k; G.hubs.push(c); book('buy',k);
+  mail('Nouveau hub : '+stationName(c),'Vous pouvez maintenant créer des lignes au départ de '+stationName(c)+' ('+COUNTRIES[STATIONS[c].c][0]+'). Pensez à commander un train adapté à l\'écartement local ('+[...gaugesAt(c)].map(g=>GAUGES[g]).join(', ')+').'); return null; }
 function addTrain(model,state,until){ const m=MODELS[model], n=G.trains.filter(t=>t.model===model).length+1;
   const tr={id:G.seq++,model,name:m.name+' #'+n,wear:0,state:state||'yard',route:null,at:'a',dep:0,dur:0,dir:'out',since:now(),until:until||0,auto:false,trip:null};
   G.trains.push(tr); return tr; }
@@ -53,7 +60,7 @@ function routeLetter(n){ const L='ABCDEFGHIJKLMNOPQRSTUVWXYZ'; return n<26?L[n]:
 function canServe(model,a,b){ net(); const m=MODELS[model]; if(a===b) return 'Choisissez deux gares différentes.';
   const r=buildRoute(a,b,m,'express'); if(!r) return 'Aucune voie compatible : ce train demande la '+GAUGES[m.g].toLowerCase()+(m.el?' électrifiée':'')+'.'; return null; }
 function createRoute(trainId,a,b,stopMode,name){
-  const tr=trainById(trainId); if(!tr) return 'Choisissez un train.'; if(tr.state==='pending') return 'Ce train n\'est pas encore livré.';
+  const tr=trainById(trainId); if(!tr) return 'Choisissez un train.'; if(!G.hubs.includes(a)) return 'La ligne doit partir d\'un de vos hubs.'; if(tr.state==='pending') return 'Ce train n\'est pas encore livré.';
   if(tr.state==='enroute') return 'Ce train est en route.';
   const e=canServe(tr.model,a,b); if(e) return e;
   if(tr.route){ G.routes=G.routes.filter(r=>r.id!==tr.route); }
@@ -165,7 +172,12 @@ const MISSIONS=[
   {id:'world',name:'Ouvrir une ligne hors d\'Afrique',pts:60,p:()=>[G.routes.some(r=>!['AF'].includes(COUNTRIES[STATIONS[r.a].c][1]))?1:0,1]},
   {id:'pax100k',name:'Transporter 100 000 voyageurs',pts:150,p:()=>[G.stats.pax,100000]},
   {id:'million',name:'Avoir 1 000 000 $ en caisse',pts:100,p:()=>[Math.floor(G.cash),1000000]},
-  {id:'routes10',name:'Avoir 10 lignes',pts:120,p:()=>[G.routes.length,10]}
+  {id:'routes10',name:'Avoir 10 lignes',pts:120,p:()=>[G.routes.length,10]},
+  {id:'hub2',name:'Établir un deuxième hub',pts:30,p:()=>[G.hubs.length,2]},
+  {id:'hubworld',name:'Établir un hub hors d\'Afrique',pts:60,p:()=>[G.hubs.some(c=>COUNTRIES[STATIONS[c].c][1]!=='AF')?1:0,1]},
+  {id:'hubs5',name:'Avoir 5 hubs',pts:120,p:()=>[G.hubs.length,5]},
+  {id:'cont3',name:'Des hubs dans 3 régions du monde',pts:150,p:()=>[new Set(G.hubs.map(c=>COUNTRIES[STATIONS[c].c][1])).size,3]},
+  {id:'hubs10',name:'Avoir 10 hubs',pts:250,p:()=>[G.hubs.length,10]}
 ];
 const missionDone=m=>{ const [a,b]=m.p(); return a>=b; };
 function claim(id){ const m=MISSIONS.find(x=>x.id===id); if(!m||G.claimed[id]||!missionDone(m)) return 'Objectif non atteint.'; G.claimed[id]=true; G.points+=m.pts; addXp(m.pts); return null; }
@@ -173,7 +185,9 @@ const claimable=()=>MISSIONS.filter(m=>!G.claimed[m.id]&&missionDone(m)).length;
 
 /* ---------- sauvegarde (navigateur ; la sauvegarde en ligne est dans ui.js) ---------- */
 function save(){ if(!G||G._fresh) return; G.savedAt=now(); try{ localStorage.setItem(SAVE_KEY,JSON.stringify(G)); SAVE_INFO.local=true; SAVE_INFO.at=now(); }catch(e){ SAVE_INFO.local=false; } }
-function adopt(o){ if(!o||o.v!==SAVE_V||!Array.isArray(o.trains)) return false; G=o; RC.clear(); return true; }
+function adopt(o){ if(!o||o.v!==SAVE_V||!Array.isArray(o.trains)) return false; G=o; RC.clear();
+  if(!G.hubs) G.hubs=[...new Set([G.start||'KIN',...G.routes.map(r=>r.a)])];      // anciennes sauvegardes
+  return true; }
 function load(){ try{ return adopt(JSON.parse(localStorage.getItem(SAVE_KEY)||'null')); }catch(e){ return false; } }
 
 /* ---------- formats ---------- */

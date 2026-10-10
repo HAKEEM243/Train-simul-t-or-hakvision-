@@ -64,6 +64,9 @@ st('TNK','Tenke-Fungurume',-10.61,26.13,0.05,'CD',{tz:2,mine:25,res:'cuivre-coba
 st('KWZ','Kolwezi',-10.72,25.47,0.6,'CD',{tz:2,mine:60,res:'cuivre-cobalt'});
 st('LKS','Likasi',-10.98,26.73,0.6,'CD',{tz:2,mine:15,res:'cuivre'});
 st('LUB','Lubumbashi',-11.66,27.48,2.6,'CD',{tz:2,mine:20,res:'cuivre'});
+st('KPS','Kipushi',-11.76,27.25,0.15,'CD',{tz:2,mine:6,res:'cuivre-zinc'});
+st('TSB','Tshimbulu',-6.48,22.85,0.1,'CD',E2);
+st('LBD','Lubudi',-9.95,25.97,0.05,'CD',{tz:2,mine:4,res:'ciment'});
 st('SAK','Sakania',-12.75,28.56,0.03,'CD',E2);
 st('MUT','Mutshatsha',-10.65,24.45,0.03,'CD',E2);
 st('KSJ','Kasaji',-10.37,23.45,0.03,'CD',E2);
@@ -200,7 +203,7 @@ st('BOS','Boston',42.35,-71.06,4.9,'US'); st('NYC','New York',40.75,-73.99,20,'U
 st('WAS','Washington',38.90,-77.01,6.3,'US');
 
 /* écartements : C = voie du Cap 1067 mm (Afrique australe et centrale), M = voie métrique 1000 mm, S = voie normale 1435 mm */
-const GAUGES={C:'Voie du Cap (1067 mm)',M:'Voie métrique (1000 mm)',S:'Voie normale (1435 mm)'};
+const GAUGES={C:'Voie du Cap (1067 mm)',M:'Voie métrique (1000 mm)',S:'Voie normale (1435 mm)',B:'Voie large (1668-1676 mm)',R:'Voie russe (1520 mm)'};
 
 /* voies existantes : [a, b, vitesse limite km/h, écartement, électrifiée, nb de voies, opts]
    opts : hs = hors service (à réhabiliter), ferry = bac ferroviaire, km = longueur imposée, op = gestionnaire */
@@ -213,8 +216,9 @@ tk(['SAK','LUB','LKS'],50,'C',0,1,{op:'SNCC'});
 tk(['LKS','TNK','KWZ'],45,'C',0,1,{op:'SNCC'});
 tk(['KWZ','MUT','KSJ','DIL'],30,'C',0,1,{op:'SNCC'});
 tk(['DIL','LUA'],30,'C',0,1,{op:'SNCC'});
-tk(['TNK','BKM','KMN'],35,'C',0,1,{op:'SNCC'});
-tk(['KMN','KNM','MWD','KGA'],30,'C',0,1,{op:'SNCC'});
+tk(['TNK','LBD','BKM','KMN'],35,'C',0,1,{op:'SNCC'});
+tk(['KMN','KNM','MWD','TSB','KGA'],30,'C',0,1,{op:'SNCC'});
+tk(['LUB','KPS'],40,'C',0,1,{op:'SNCC'});
 tk(['KGA','MWK','ILB'],25,'C',0,1,{op:'SNCC'});
 tk(['KMN','KBL','NYZ','KLM'],25,'C',0,1,{op:'SNCC'});
 tk(['KBL','KGL','KBB','KND'],20,'C',0,1,{op:'SNCC'});

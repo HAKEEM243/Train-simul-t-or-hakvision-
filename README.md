@@ -9,6 +9,7 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 
 ## Le jeu
 Jeu de gestion de trains en temps réel (accéléré), centré sur le **Congo** :
+- **Hubs dans le monde entier** : chaque ligne part d'un de vos hubs ; établissez-en au Congo, en Afrique, en Europe, en Russie, en Inde, en Chine, en Amérique, en Océanie (444 gares, 79 pays, fenêtre MONDE pour voyager).
 - **Une ligne = un train.** Au DÉPÔT → ITINÉRAIRES, choisissez un train, une gare de départ et d'arrivée sur le vrai réseau
   (Matadi–Kinshasa, réseau SNCC du Katanga et du Kasaï, Congo-Océan, corridor de Lobito, TAZARA…).
 - **Faire partir** les trains depuis la liste « À LA GARE » ; ils roulent sur la carte ; à l'arrivée la recette tombe.
@@ -24,7 +25,8 @@ Les noms de trains, illustrations et textes sont propres à ce jeu.
 | Fichier | Rôle |
 |---|---|
 | `index.html` | page, styles, chargement des scripts |
-| `data.js` | pays, régions économiques, gares, voies, projets, matériel, lignes concurrentes |
+| `data.js` | Congo et Afrique : pays, régions, gares, voies, matériel |
+| `data-world.js` | reste du monde : gares, voies, écartements B et R, trains, villes de départ, régions de la carte |
 | `network.js` | graphe des voies, plus court chemin compatible, profils de vitesse, itinéraires avec arrêts |
 | `game.js` | état unique `G`, trains, itinéraires, départs/arrivées, carburant, usure, objectifs, boutique, sauvegarde |
 | `ui.js` | carte, barre du haut, menu, liste des trains, fenêtres, sauvegarde en ligne |

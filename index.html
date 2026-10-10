@@ -147,6 +147,9 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;over
 .pos{color:var(--green)}.neg{color:var(--red)}
 .bars{width:35%}.bars i{display:block;height:6px;border-radius:3px;margin:2px 0}.bars i.p{background:var(--green)}.bars i.n{background:var(--red)}
 .msg{background:#fff;border-radius:8px;padding:10px}.msg.new{border-left:4px solid var(--yellow)}.msg small{float:right;color:var(--mut)}.msg p{margin:6px 0 0;color:#333}
+.hubs{display:flex;flex-wrap:wrap;gap:8px}.hubchip{display:flex;flex-direction:column;align-items:flex-start;background:#fff;border:2px solid var(--yellow);border-radius:10px;padding:6px 10px;font:600 16px var(--f);color:var(--ink)}.hubchip small{font:500 12px var(--fb);color:var(--mut)}
+.regions{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}.regions button{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px;font:600 16px var(--f);text-align:left}
+.hubok{background:#fff7d6;border:2px solid var(--yellow);border-radius:8px;padding:8px 10px;font-weight:600}.hubmk{filter:drop-shadow(0 1px 2px #0006)}
 .help{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
 #toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 118px);z-index:1100;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(440px,92%)}
 .toast{background:var(--navy);color:#fff;padding:10px 16px;border-radius:24px;box-shadow:0 4px 14px #0005;font-weight:600;text-align:center;animation:pop .25s ease-out}
@@ -158,7 +161,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;over
   #top .k b{font-size:19px}#top .k small{font-size:11px}
   .gauge,.gauge>svg{width:46px;height:46px}
   #co{font-size:15px;max-width:calc(100% - 40px)}
-  #hex{top:118px;right:2px;gap:7px}
+  #hex{top:112px;right:2px;gap:4px}
   .hx{width:74px}.hx .h{width:56px;height:48px}.hx .l{font-size:10.5px;padding:2px 6px;margin-top:-6px}
   .row{font-size:16px;grid-template-columns:6px 1.2fr 1fr .9fr 16px 30px;gap:6px}
   .dcols{font-size:14px}
@@ -185,6 +188,7 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;over
  <div id="map"></div>
  <nav id="hex">
   <button class="hx" id="h-check" data-act="open" data-v="check"><span class="h"><svg class="ic" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="5" rx="1"/><path d="M4 6.5l1.3 1.3L7.5 5M11 6.5h10M3 14h5v5H3zM11 16.5h10"/></svg></span><span class="l">OBJECTIFS</span></button>
+  <button class="hx" data-act="open" data-v="world"><span class="h"><svg class="ic" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></span><span class="l">MONDE</span></button>
   <button class="hx gold" data-act="open" data-v="shop"><span class="h"><svg class="ic" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8.5 14l-2 8 5.5-3 5.5 3-2-8"/></svg></span><span class="l">BOUTIQUE</span></button>
   <button class="hx" data-act="open" data-v="company"><span class="h"><svg class="ic" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V5l8-2v18M12 8h8v13M2 21h20M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2"/></svg></span><span class="l">COMPAGNIE</span></button>
   <button class="hx" data-act="open" data-v="yard"><span class="h"><svg class="ic" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V9l9-6 9 6v12M3 21h18M7 21v-6h10v6M7 11h10"/></svg></span><span class="l">DÉPÔT</span></button>
@@ -196,17 +200,18 @@ table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;over
  <div id="mapbtns">
   <div class="mg"><button data-act="rails" aria-label="Afficher ou masquer les voies"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/></svg></button></div>
   <div class="mg"><button data-act="zin" aria-label="Zoomer"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M10.5 7.5v6M7.5 10.5h6"/></svg></button><button data-act="zout" aria-label="Dézoomer"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M7.5 10.5h6"/></svg></button></div>
-  <div class="mg"><button data-act="globe" aria-label="Voir mes lignes"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></button><button data-act="open" data-v="help" aria-label="Aide"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0012 3z"/></svg></button></div>
+  <div class="mg"><button data-act="open" data-v="world" aria-label="Monde et hubs"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg></button><button data-act="open" data-v="help" aria-label="Aide"><svg class="ic" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0012 3z"/></svg></button></div>
  </div>
  <aside id="drawer" hidden></aside>
 </div>
 <div id="modal" hidden></div>
 <div id="toasts" aria-live="polite"></div>
 <script src="vendor/leaflet.js"></script>
-<script src="world.js?v=2.0.0"></script>
-<script src="data.js?v=2.0.0"></script>
-<script src="network.js?v=2.0.0"></script>
-<script src="game.js?v=2.0.0"></script>
-<script src="ui.js?v=2.0.0"></script>
+<script src="world.js?v=2.1.0"></script>
+<script src="data.js?v=2.1.0"></script>
+<script src="data-world.js?v=2.1.0"></script>
+<script src="network.js?v=2.1.0"></script>
+<script src="game.js?v=2.1.0"></script>
+<script src="ui.js?v=2.1.0"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body></html>

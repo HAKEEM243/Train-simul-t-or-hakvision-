@@ -2,7 +2,7 @@
    Hakvision Rail — interface : carte claire, barre du haut, menu hexagonal, tiroir des trains, fenêtres.
    ========================================================= */
 'use strict';
-const APP_V='2.0.0';
+const APP_V='2.1.0';
 const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const UI={drawer:false,dtab:'station',sel:new Set(),modal:null,mtab:{yard:'fleet'},fleetFilter:'all',model:null,form:{train:null,a:'KIN',b:null,stop:'omni',name:''}};
 let map,LY={},TM=new Map();
@@ -87,8 +87,10 @@ function drawLabels(){ LY.clab.clearLayers(); const z=map.getZoom();
 let railsOn=true;
 function drawRails(){ LY.rails.clearLayers(); if(!railsOn) return;
   for(const e of NET.edges){ const A=STATIONS[e.a],B=STATIONS[e.b]; L.polyline([[A.la,A.lo],[B.la,B.lo]],{pane:'rails',color:e.hs?'#b9b2a8':'#7d7d7d',weight:e.tr>=2?2.4:1.6,opacity:.8,dashArray:e.hs||e.ferry?'3 5':null,interactive:false}).addTo(LY.rails); } }
-function drawStations(){ LY.st.clearLayers(); const z=map.getZoom(), used=new Set(G.routes.flatMap(r=>geom(r)?geom(r).out.stops.map(s=>s.code):[]));
-  for(const s of Object.values(STATIONS)){ const big=s.p>=1, cg=s.c==='CD'||s.c==='CG', show=used.has(s.code)||z>=7||(z>=5&&(s.p>=0.2||cg))||(z>=4&&s.p>=1.5)||s.p>=8;
+const STAR='<svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2l2.9 6.6 7.1.7-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.3l7.1-.7z" fill="#ffcc1a" stroke="#1b2257" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+function drawStations(){ LY.st.clearLayers();
+  for(const c of G.hubs){ const s=STATIONS[c]; L.marker([s.la,s.lo],{icon:L.divIcon({className:'hubmk',html:STAR,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:300}).addTo(LY.st).on('click',()=>openModal('station',c)); } const z=map.getZoom(), used=new Set(G.routes.flatMap(r=>geom(r)?geom(r).out.stops.map(s=>s.code):[]));
+  for(const s of Object.values(STATIONS)){ const big=s.p>=1, cg=s.c==='CD'||s.c==='CG', show=G.hubs.includes(s.code)||used.has(s.code)||z>=7||(z>=5&&(s.p>=0.2||cg))||(z>=4&&s.p>=1.5)||s.p>=8;
     if(!show) continue; const mk=L.circleMarker([s.la,s.lo],{radius:big?4:3,color:'#555',weight:1,fillColor:'#fff',fillOpacity:1,pane:'rails'}).addTo(LY.st);
     mk.bindTooltip(esc(s.n),{permanent:true,direction:'right',offset:[4,0],className:'slab'+(big?' big':'')}); mk.on('click',()=>openModal('station',s.code)); } }
 function drawRoutes(){ LY.routes.clearLayers();
@@ -136,9 +138,9 @@ function closeModal(){ UI.modal=null; $('#modal').hidden=true; $('#modal').inner
 function sheet(title,body,tabs,noClose){ return `<div class="sheet">${noClose?'':`<button class="mx" data-act="close" aria-label="Fermer">${ico('close',26)}</button>`}<h2>${title}</h2>${tabs||''}<div class="sbody">${body}</div></div>`; }
 function tabsHtml(key,list){ return `<nav class="stabs">${list.map(([k,l])=>`<button class="${UI.mtab[key]===k?'on':''}" data-act="mtab" data-k="${key}" data-v="${k}">${l}</button>`).join('')}</nav>`; }
 function renderModal(){ const M=UI.modal, el=$('#modal'); if(!M){ el.hidden=true; return; } el.hidden=false;
-  const f={yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
+  const f={world:mWorld,yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
   const sc=el.querySelector('.sbody'), top=sc?sc.scrollTop:0; el.innerHTML=f(M.arg); const sb=el.querySelector('.sbody'); if(sb&&M.keep) sb.scrollTop=top; M.keep=true; }
-const sOpts=(sel,filter)=>{ const order=['CD','CG','AO','ZM','TZ','ZW','BW','ZA','KE','UG','RW','BI','GA','CM','ET','DJ','NG','MA','EG','FR','GB','BE','NL','DE','CH','IT','ES','JP','CN','US'];
+const sOpts=(sel,filter)=>{ const order=['CD','CG',...Object.keys(COUNTRIES).filter(c=>c!=='CD'&&c!=='CG').sort((a,b)=>COUNTRIES[a][0].localeCompare(COUNTRIES[b][0]))];
   return order.map(c=>{ const l=Object.values(STATIONS).filter(s=>s.c===c&&(!filter||filter(s.code))).sort((x,y)=>x.n.localeCompare(y.n)); return l.length?`<optgroup label="${esc(COUNTRIES[c][0])}">${l.map(s=>`<option value="${s.code}" ${s.code===sel?'selected':''}>${esc(s.n)}</option>`).join('')}</optgroup>`:''; }).join(''); };
 const stateFr=t=>({enroute:'En route',station:'En gare',yard:'Au dépôt',pending:'En livraison'}[t.state]);
 function specLine(m){ return `${GAUGES[m.g]} · ${m.el?'électrique ('+m.epk+' kWh/km)':'diesel ('+m.fpk+' L/km)'}${m.comfort?' · confort +'+Math.round((m.comfort-1)*100)+' %':''}`; }
@@ -167,16 +169,16 @@ function mYard(){ const tab=UI.mtab.yard||'fleet', T=tabsHtml('yard',[['fleet','
 function routeForm(){ const f=UI.form, free=G.trains.filter(t=>t.state==='yard'||t.state==='station');
   if(!free.length) return `<div class="empty">Tous vos trains sont en route ou en livraison. Commandez un train ou attendez son arrivée.</div>`;
   if(!free.some(t=>t.id===f.train)) f.train=free[0].id; const tr=trainById(f.train), m=MODELS[tr.model];
-  net(); const reach=reachable(f.a,m); if(!reach.has(f.b)) f.b=[...reach].sort((x,y)=>STATIONS[y].p-STATIONS[x].p)[0]||null;
+  if(!G.hubs.includes(f.a)) f.a=G.hubs[0]; net(); const reach=reachable(f.a,m); if(!reach.has(f.b)) f.b=[...reach].sort((x,y)=>STATIONS[y].p-STATIONS[x].p)[0]||null;
   let prev=''; if(f.b){ const tmp={id:-1,a:f.a,b:f.b,model:tr.model,stopMode:f.stop}; G.routes.push(tmp); const p=tripPlan({route:-1,model:tr.model,at:'a',id:tr.id}); G.routes.pop();
     if(p){ const g=geom(tmp), cost=p.fuel*fuelPrice()+p.energy*energyPrice();
      prev=`<div class="prev"><div><b>${Math.round(g.km)} km</b> · ${g.out.stops.length} arrêts · trajet <b>${fmtIn(g.out.T/G.scale)}</b> (${fmtDurGame(g.out.T)} en jeu)</div><div class="mut">${g.out.stops.map(s=>esc(stationName(s.code))).join(' → ')}</div>
        <div>Par trajet ≈ ${m.pax?'<b>'+p.pax+'</b> voyageurs':''}${m.pax&&m.t?' + ':''}${m.t?'<b>'+p.tons+'</b> t':''} · recette <b>${fmt$(p.rev)}</b> · ${m.el?Math.round(p.energy).toLocaleString('fr')+' kWh':Math.round(p.fuel).toLocaleString('fr')+' L'} (≈ ${fmt$(cost)})</div></div>`; } }
   return `<div class="form"><h4 class="sec">CRÉER UN ITINÉRAIRE</h4>
    <label>Train<select data-f="train">${free.map(t=>`<option value="${t.id}" ${t.id===f.train?'selected':''}>${esc(t.name)} · ${stateFr(t)}${t.route?' (remplace '+esc(routeOfTrain(t).name)+')':''}</option>`).join('')}</select></label>
-   <div class="two"><label>Départ<select data-f="a">${sOpts(f.a)}</select></label><label>Arrivée (${reach.size} gares)<select data-f="b">${reach.size?sOpts(f.b,c=>reach.has(c)):'<option>—</option>'}</select></label></div>
+   <div class="two"><label>Départ (vos hubs)<select data-f="a">${G.hubs.map(c=>`<option value="${c}" ${c===f.a?'selected':''}>⭐ ${esc(stationName(c))} (${esc(COUNTRIES[STATIONS[c].c][0])})</option>`).join('')}</select></label><label>Arrivée (${reach.size} gares)<select data-f="b">${reach.size?sOpts(f.b,c=>reach.has(c)):'<option>—</option>'}</select></label></div>
    <div class="two">${m.pax?`<label>Arrêts<select data-f="stop">${[['omni','Toutes les gares'],['express','Grandes villes'],['direct','Direct']].map(([k,l])=>`<option value="${k}" ${k===f.stop?'selected':''}>${l}</option>`).join('')}</select></label>`:''}<label>Nom<input data-f="name" value="${esc(f.name)}" placeholder="${routeLetter(G.routes.length)}-Line" maxlength="24"></label></div>
-   ${reach.size?prev:'<div class="err">Aucune gare accessible depuis ici avec ce train ('+esc(GAUGES[m.g])+(m.el?', voie électrifiée':'')+').</div>'}
+   ${reach.size?prev:'<div class="err">Ce train ne peut pas rouler depuis ce hub : il demande la '+esc(GAUGES[m.g].toLowerCase())+(m.el?' électrifiée':'')+'. Ici : '+esc([...gaugesAt(f.a)].map(g=>GAUGES[g]).join(', ')||'aucune voie')+'. Commandez un train adapté (COMMANDER).</div>'}
    <button class="go wide" data-act="mkroute" ${f.b?'':'disabled'}>CRÉER L'ITINÉRAIRE</button></div>`; }
 function mCheck(){ return sheet('OBJECTIFS',MISSIONS.map(m=>{ const [a,b]=m.p(), done=a>=b, got=G.claimed[m.id];
   return `<div class="mis ${got?'got':''}"><div><b>${esc(m.name)}</b><div class="prog"><i style="width:${Math.min(1,a/b)*100}%"></i></div><small>${Math.min(a,b).toLocaleString('fr')} / ${b.toLocaleString('fr')}</small></div>
@@ -189,6 +191,7 @@ function mCompany(){ const H=G.priceHist.slice(-48), mn=Math.min(...H.map(x=>x.p
    <div class="lvl"><b>Niveau ${G.level}</b><div class="prog"><i style="width:${G.xp/xpFor(G.level)*100}%"></i></div><small>${G.xp} / ${xpFor(G.level)} XP</small></div>
    <div class="kpi"><div><span>Valeur</span><b>${fmt$(companyValue())}</b></div><div><span>Action</span><b>$${sharePrice().toFixed(2)}</b></div><div><span>Trains</span><b>${G.trains.length}</b></div><div><span>Lignes</span><b>${G.routes.length}</b></div>
    <div><span>Voyageurs</span><b>${G.stats.pax.toLocaleString('fr')}</b></div><div><span>Fret</span><b>${G.stats.tons.toLocaleString('fr')} t</b></div><div><span>Trajets</span><b>${G.stats.trips}</b></div><div><span>Gares desservies</span><b>${G.stats.stations.length}</b></div></div>
+   <h4 class="sec">HUBS (${G.hubs.length})</h4><div class="hubs">${G.hubs.map(c=>`<button class="hubchip" data-act="fly" data-v="${c}">⭐ ${esc(stationName(c))}<small>${esc(COUNTRIES[STATIONS[c].c][0])}</small></button>`).join('')}</div>
    ${H.length>1?`<h4 class="sec">COURS DE L'ACTION</h4><svg viewBox="0 0 300 85" class="spark"><polyline points="${pts}" fill="none" stroke="#1e88ff" stroke-width="2.5"/></svg><div class="mut">De $${mn.toFixed(2)} à $${mx.toFixed(2)} · calculé à partir de la valeur de votre compagnie.</div>`:''}`); }
 function priceChart(fn,unit){ const t=now(), xs=Array.from({length:37},(_,i)=>t-(36-i)*20*60e3), ys=xs.map(x=>fn(x)), mn=Math.min(...ys), mx=Math.max(...ys), y=v=>64-(v-mn)/(mx-mn||1)*58;
   return `<svg viewBox="-4 0 308 70" class="spark"><polyline points="${ys.map((v,i)=>`${i/36*300},${y(v)}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="300" cy="${y(ys[36])}" r="4" fill="currentColor"/></svg><div class="mut">12 dernières heures : de ${mn.toFixed(3)} à ${mx.toFixed(3)} $/${unit}</div>`; }
@@ -232,9 +235,15 @@ function mStation(c){ const s=STATIONS[c], rs=G.routes.filter(r=>geom(r)&&geom(r
   return sheet(esc(s.n.toUpperCase()),`<div class="kpi"><div><span>Pays</span><b>${esc(COUNTRIES[s.c][0])}</b></div><div><span>Habitants</span><b>${s.p>=1?s.p+' M':Math.round(s.p*1000)+' k'}</b></div>
    <div><span>Voies</span><b>${NET.adj[c].length}</b></div><div><span>Ressource</span><b>${s.mine?esc(s.res)+' ('+s.mine+' kt/sem)':s.port?(s.port>=0.6?'Port maritime':'Port fluvial'):'—'}</b></div></div>
    ${rs.length?'<h4 class="sec">VOS LIGNES</h4>'+rs.map(r=>`<div class="unit" data-act="route" data-v="${r.id}"><i class="cb" style="background:${r.color}"></i><div><b>${esc(r.name)}</b> · ${esc(stationName(r.a))} ⇄ ${esc(stationName(r.b))}</div></div>`).join(''):''}
-   ${NET.adj[c].length?`<button class="go wide" data-act="routefrom" data-v="${c}">CRÉER UN ITINÉRAIRE D'ICI</button>`:'<div class="mut">Pas de voie ferrée dans cette ville.</div>'}`); }
+   ${!NET.adj[c].length?'<div class="mut">Pas de voie ferrée dans cette ville (pour l\'instant).</div>':G.hubs.includes(c)?`<div class="hubok">⭐ Hub de votre compagnie · ${esc([...gaugesAt(c)].map(g=>GAUGES[g]).join(', '))}</div><button class="go wide" data-act="routefrom" data-v="${c}">CRÉER UN ITINÉRAIRE D'ICI</button>`
+     :`<div class="mut">Établissez un hub ici pour y ouvrir des lignes. Écartement local : ${esc([...gaugesAt(c)].map(g=>GAUGES[g]).join(', ')||'—')}.</div><button class="go wide" data-act="hub" data-v="${c}">⭐ ÉTABLIR UN HUB · ${fmt$(hubCost(c))}</button>`}`); }
+function mWorld(){ return sheet('MONDE',`<h4 class="sec">VOS HUBS (${G.hubs.length})</h4><div class="hubs">${G.hubs.map(c=>`<button class="hubchip" data-act="fly" data-v="${c}">⭐ ${esc(stationName(c))}<small>${esc(COUNTRIES[STATIONS[c].c][0])}</small></button>`).join('')}</div>
+   <button data-act="globe" class="go wide">VOIR TOUTES MES LIGNES</button>
+   <h4 class="sec">RÉGIONS</h4><div class="regions">${MAP_REGIONS.map((r,i)=>`<button data-act="region" data-v="${i}">${esc(r[0])}</button>`).join('')}</div>
+   <h4 class="sec">GRANDS HUBS À ÉTABLIR</h4><div class="mut">Touchez une ville sur la carte pour y établir un hub. Quelques idées :</div>
+   ${START_CITIES.filter(c=>!G.hubs.includes(c)).slice(0,24).map(c=>`<div class="unit"><div><b>${esc(stationName(c))}</b><div class="mut">${esc(COUNTRIES[STATIONS[c].c][0])} · ${esc([...gaugesAt(c)].map(g=>GAUGES[g]).join(', '))}</div></div><button data-act="fly" data-v="${c}">Voir</button><button class="go" data-act="hub" data-v="${c}">${fmt$(hubCost(c))}</button></div>`).join('')}`); }
 function mNewGame(){ return sheet('HAKVISION RAIL',`<p>Bâtissez votre compagnie de chemin de fer au Congo, puis dans le monde entier.</p><label>Nom de votre compagnie<input id="ng-name" value="Hakvision Rail" maxlength="30"></label>
-   <label>Ville de départ<select id="ng-start">${['KIN','LUB','BZV','PNR','KWZ','MAT','KGA','KIS'].map(c=>`<option value="${c}">${esc(stationName(c))}</option>`).join('')}</select></label><button class="go wide" data-act="startgame">COMMENCER</button>`,'',true); }
+   <label>Premier hub<select id="ng-start">${START_CITIES.map(c=>`<option value="${c}">${esc(stationName(c))} (${esc(COUNTRIES[STATIONS[c].c][0])})</option>`).join('')}</select></label><div class="mut">Vous pourrez établir d'autres hubs partout dans le monde.</div><button class="go wide" data-act="startgame">COMMENCER</button>`,'',true); }
 
 /* ---------- actions ---------- */
 function toast(t,kind){ const box=$('#toasts'); if(box.children.length>3) box.firstChild.remove(); const d=document.createElement('div'); d.className='toast '+(kind||''); d.textContent=t; box.appendChild(d); setTimeout(()=>d.remove(),3800); }
@@ -246,7 +255,7 @@ const ACT={
   ff:b=>{ UI.fleetFilter=b.dataset.v; renderModal(); }, model:b=>{ UI.model=b.dataset.v||null; renderModal(); },
   train:b=>openModal('train',+b.dataset.v), route:b=>openModal('route',+b.dataset.v),
   assign:b=>{ UI.form.train=+b.dataset.v; const r=routeOfTrain(trainById(UI.form.train)); if(r){ UI.form.a=r.a; UI.form.b=r.b; } UI.mtab.yard='routes'; UI.model=null; openModal('yard'); },
-  routefrom:b=>{ UI.form.a=b.dataset.v; UI.mtab.yard='routes'; UI.model=null; openModal('yard'); },
+  routefrom:b=>{ UI.form.a=b.dataset.v; const tr=G.trains.find(t=>(t.state==='yard'||t.state==='station')&&reachable(b.dataset.v,MODELS[t.model]).size); if(tr) UI.form.train=tr.id; UI.mtab.yard='routes'; UI.model=null; openModal('yard'); },
   mkroute:()=>{ const f=UI.form; if(res(createRoute(f.train,f.a,f.b,f.stop,f.name.trim()),'Itinéraire créé ! Faites partir le train depuis « À la gare ».')){ f.name=''; drawRoutes(); updateTrains(); fitAll(); closeModal(); UI.drawer=true; UI.dtab='station'; renderDrawer(); saveAll(); } },
   delroute:b=>{ if(!armed(b,'Confirmer ?')) return; if(res(deleteRoute(+b.dataset.v),'Ligne supprimée.')){ closeModal(); drawRoutes(); renderDrawer(); saveAll(); } },
   zoomroute:b=>{ const r=routeById(+b.dataset.v); closeModal(); map.fitBounds(geom(r).out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]),{padding:[50,50]}); },
@@ -269,7 +278,10 @@ const ACT={
   import:()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.json'; i.onchange=()=>{ const fr=new FileReader(); fr.onload=()=>{ try{ if(!adopt(JSON.parse(fr.result))) throw 0; saveAll(); toast('Partie importée.'); closeModal(); fullRedraw(); }catch(e){ toast('Fichier invalide.','bad'); } }; fr.readAsText(i.files[0]); }; i.click(); },
   reset:b=>{ if(!armed(b,'Effacer la partie ? Cliquez encore')) return; openModal('newgame'); },
   startgame:()=>{ newGame($('#ng-name').value.trim()||'Hakvision Rail',$('#ng-start').value); UI.form.a=G.start; UI.sel.clear(); closeModal(); saveAll(); fullRedraw(); map.setView([STATIONS[G.start].la,STATIONS[G.start].lo],6); openModal('help'); },
-  zin:()=>map.zoomIn(), zout:()=>map.zoomOut(), globe:()=>fitAll(), rails:()=>{ railsOn=!railsOn; drawRails(); toast(railsOn?'Voies affichées.':'Voies masquées.'); }
+  hub:b=>{ const c=b.dataset.v; if(res(buyHub(c),'⭐ Hub établi à '+stationName(c)+' !')){ UI.form.a=c; drawStations(); renderModal(); saveAll(); } },
+  fly:b=>{ const s=STATIONS[b.dataset.v]; closeModal(); map.setView([s.la,s.lo],7); setTimeout(()=>openModal('station',b.dataset.v),350); },
+  region:b=>{ const r=MAP_REGIONS[+b.dataset.v]; closeModal(); map.setView([r[1],r[2]],r[3]); },
+  zin:()=>map.zoomIn(), zout:()=>map.zoomOut(), globe:()=>{ closeModal(); fitAll(); }, rails:()=>{ railsOn=!railsOn; drawRails(); toast(railsOn?'Voies affichées.':'Voies masquées.'); }
 };
 document.addEventListener('click',e=>{ if(e.target.closest('[data-stop]')) return; const b=e.target.closest('[data-act]'); if(!b||b.disabled) return; e.preventDefault(); if(ACT[b.dataset.act]) ACT[b.dataset.act](b); if(G) renderTop(); });
 document.addEventListener('change',e=>{ const t=e.target;
