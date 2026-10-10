@@ -13,7 +13,7 @@ const TRACK_FACTOR=1.18;                        // une voie serpente : ~18 % plu
 /* ---------- construction du graphe à partir des données + modifications du joueur (S.net) ---------- */
 let NET={edges:[],byId:{},adj:{},ver:0};
 function buildNet(){
-  const edges=[], mods=(S&&S.net&&S.net.mods)||{}, built=(S&&S.net&&S.net.built)||[];
+  const edges=[], mods={}, built=[];   // réseau réel (pas de construction dans cette version)
   TRACKS.forEach((t,i)=>{ const o=t[6]; edges.push({id:'T'+i,a:t[0],b:t[1],v:t[2],g:t[3],el:t[4],tr:t[5],hs:!!o.hs,ferry:!!o.ferry,op:o.op||'',own:false,
     km:o.km||Math.round(gcKm(t[0],t[1])*TRACK_FACTOR)}); });
   for(const b of built) edges.push(Object.assign({hs:false,ferry:false,op:'Vous',own:true},b));

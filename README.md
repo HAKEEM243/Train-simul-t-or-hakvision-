@@ -8,21 +8,17 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 - En ligne : GitHub Pages (voir plus bas). Sur iPhone : Safari → Partager → « Sur l'écran d'accueil » (appli installable, fonctionne hors-ligne).
 
 ## Le jeu
-- **~200 gares** dont **70 au Congo** : Kinshasa, Matadi, Boma, Lubumbashi, Kolwezi, Likasi, Kananga, Mbuji-Mayi, Kisangani, Kindu,
-  Kalemie, Ilebo, Goma, Bukavu, Brazzaville, Pointe-Noire, Dolisie… et des hubs dans le monde (Lobito, Dar es Salaam, Johannesburg,
-  Nairobi, Casablanca, Le Caire, Paris, Londres, Tokyo, Shanghai, New York…).
-- **Réseau réel simplifié** : Matadi–Kinshasa, réseau SNCC (Katanga, Kasaï, Maniema), Congo-Océan, Benguela (corridor de Lobito),
-  TAZARA, Zambie, Afrique du Sud, SGR Tanzanie et Kenya, LGV européennes, Shinkansen…
-  Les voies congolaises sont **usées** (20 à 50 km/h) ; certaines sont **hors service** (Uele, Mayumbe, COMILOG).
-- **Écartements** (voie du Cap 1067 mm, métrique, normale 1435 mm) et **électrification** : le matériel doit être compatible.
-- **Voyageurs** (modèle gravitaire selon population et distance) et **fret** (cuivre-cobalt de Kolwezi, Likasi, Tenke ; manganèse ;
-  importations des ports vers les grandes villes).
-- **Chantiers** : remise en état, modernisation, électrification, doublement, changement d'écartement, construction de voies neuves
-  et **grands projets** (pont Kinshasa–Brazzaville, chaînon Kinshasa–Ilebo, Ubundu–Kindu, port de Banana…).
-- **Concurrents** (SNCC, SCTP, CFCO, Lobito Atlantic Railway, TAZARA, SNCF, JR…) avec horaires fixes, et des challengers fictifs.
-- **Événements** : saison des pluies, éboulements, pannes, cours du cuivre.
-- **Hubs** : chaque ligne part d'un de vos hubs.
-- **Finances** : emprunts, frais fixes, péages, bilans hebdomadaires.
+Jeu de gestion de trains en temps réel (accéléré), centré sur le **Congo** :
+- **Une ligne = un train.** Au DÉPÔT → ITINÉRAIRES, choisissez un train, une gare de départ et d'arrivée sur le vrai réseau
+  (Matadi–Kinshasa, réseau SNCC du Katanga et du Kasaï, Congo-Océan, corridor de Lobito, TAZARA…).
+- **Faire partir** les trains depuis la liste « À LA GARE » ; ils roulent sur la carte ; à l'arrivée la recette tombe.
+- **Gazole et énergie** à acheter au prix du marché (il change toutes les 10 minutes), **usure** et **entretien**.
+- **Dépôt** : flotte, itinéraires, commande de trains (livraison en quelques minutes), emplacements limités.
+- **Objectifs** et **points**, **boutique** (en points du jeu uniquement), **niveaux** qui débloquent du matériel,
+  **pilote automatique**, **cours de l'action** de votre compagnie, **finances** et emprunts, messages.
+- Les trajets continuent quand le jeu est fermé. Sauvegarde automatique (compte claude.ai ou navigateur).
+
+Les noms de trains, illustrations et textes sont propres à ce jeu.
 
 ## Architecture (voir le brief d'origine)
 | Fichier | Rôle |
@@ -30,18 +26,19 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 | `index.html` | page, styles, chargement des scripts |
 | `data.js` | pays, régions économiques, gares, voies, projets, matériel, lignes concurrentes |
 | `network.js` | graphe des voies, plus court chemin compatible, profils de vitesse, itinéraires avec arrêts |
-| `sim.js` | état unique `S`, calendrier fixe, économie, horloge (`advance` par pas de 5 min), IA, sauvegarde, rattrapage hors-ligne |
-| `ui.js` | carte Leaflet (fond vectoriel hors-ligne), panneaux, actions |
+| `game.js` | état unique `G`, trains, itinéraires, départs/arrivées, carburant, usure, objectifs, boutique, sauvegarde |
+| `ui.js` | carte, barre du haut, menu, liste des trains, fenêtres, sauvegarde en ligne |
 | `world.js` | fond de carte Natural Earth simplifié (généré par `tools/build_world.py`) |
 | `sw.js`, `manifest.json` | appli installable, hors-ligne |
 
 Principes : **la position d'un train est une fonction du temps** (calculée depuis l'horaire), un seul état `S` sauvegardé,
-calendrier hebdomadaire fixe à l'heure locale, rattrapage du temps passé hors du jeu (30 jours max).
+les arrivées pendant l'absence sont traitées à la réouverture.
 
 ## Tests
 ```
-node tests/sim.test.js          # logique : itinéraires, économie, 1 an simulé, sauvegarde, rattrapage
-node tests/ui.test.js           # interface (Playwright) : bureau + mobile, rechargement, absence simulée
+node tests/game.test.js                      # logique : itinéraires, départs, arrivées, absence, sauvegarde
+node tests/artifact.test.js                  # interface (Playwright), bureau + mobile, rechargement
+node tests/artifact.test.js page.html        # page autonome dans un cadre isolé (comme sur claude.ai)
 ```
 
 ## Honnêteté sur les données

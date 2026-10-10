@@ -278,59 +278,22 @@ tk(['PEK','JNN','NKG','SHA'],350,'S',1,2,{op:'CR'}); tk(['PEK','WUH','CAN','SZX'
 tk(['NKG','WUH'],300,'S',1,2,{op:'CR'}); tk(['SZX','HKG'],200,'S',1,2,{op:'CR'});
 tk(['BOS','NYC','PHL','WAS'],200,'S',1,2,{op:'Amtrak'});
 
-/* grands projets suggérés (réels ou discutés depuis longtemps ; coûts du jeu = estimations) */
-const PROJECTS=[
-  {name:'Pont route-rail Kinshasa–Brazzaville',path:['KIN','BZV'],g:'C',v:80,km:8,extra:450,note:'Relier les deux capitales les plus proches du monde par-dessus le fleuve Congo.'},
-  {name:'Chaînon manquant Kinshasa–Ilebo',path:['KIN','KEN','KIK','ILB'],g:'C',v:100,note:'Le rêve historique : relier Kinshasa au réseau du Katanga sans passer par le fleuve.'},
-  {name:'Ubundu–Kindu (boucle du Lualaba)',path:['UBD','KND'],g:'C',v:80,note:'Relier Kisangani au réseau national. Attention : Kisangani–Ubundu est en voie métrique.'},
-  {name:'Port en eau profonde de Banana',path:['MAT','BOM','MOA','BAN'],g:'C',v:100,note:'Prolonger la ligne de Matadi jusqu\'à l\'océan.'},
-  {name:'Mwene-Ditu–Mbuji-Mayi',path:['MWD','MBM'],g:'C',v:100,note:'Desservir la 2e ou 3e ville du pays, sans rail aujourd\'hui.'},
-  {name:'Kananga–Tshikapa',path:['KGA','TSK'],g:'C',v:100,note:'Le Kasaï diamantifère.'},
-  {name:'Kisangani–Buta (vers les Uele)',path:['KIS','BUT'],g:'C',v:80,note:'Rejoindre l\'ancien réseau des Uele.'},
-  {name:'Corridor des Grands Lacs (Goma–Bukavu–Uvira)',path:['GOM','BKV','UVR','BJM'],g:'C',v:80,note:'L\'Est sans chemin de fer : un énorme marché.'},
-  {name:'Goma–Kigali',path:['GOM','KGI'],g:'S',v:120,note:'Se raccorder au futur réseau à voie normale de l\'Afrique de l\'Est.'},
-  {name:'Kasese–Beni–Bunia',path:['KSE','BEN','BNI'],g:'M',v:80,note:'Prolonger le réseau ougandais vers l\'Ituri.'},
-  {name:'Butembo–Goma',path:['BEN','BTB','GOM'],g:'C',v:80,note:'Le Nord-Kivu.'},
-  {name:'Brazzaville–Oyo–Ouesso',path:['BZV','OYO','OWA','OUS'],g:'C',v:100,note:'Le nord du Congo-Brazzaville.'},
-  {name:'Kinshasa–Mbandaka',path:['KIN','MBK'],g:'C',v:100,note:'Long, à travers la forêt : très cher.'}
-];
-
-/* matériel roulant : g = écartement, el = électrique, seats/cap, vmax km/h, acc m/s², price M$, epk = énergie $/km, crew = agents */
+/* catalogue de matériel (noms et livrées propres au jeu) :
+   g = écartement, el = électrique, pax = places, t = tonnes de fret, vmax km/h, acc m/s², price $, pts = prix en points (option),
+   fpk = gazole L/km (diesel) ou epk = kWh/km (électrique), lvl = niveau requis, liv = [caisse, bande, toit] */
 const MODELS={
-  AUT_C:{name:'Autorail diesel',g:'C',kind:'pax',seats:160,vmax:100,acc:0.6,price:5,epk:4,crew:3},
-  PAX_C:{name:'Train voyageurs (loco + 10 voitures)',g:'C',kind:'pax',seats:700,vmax:90,acc:0.25,price:12,epk:7,crew:6},
-  NUIT_C:{name:'Express couchettes',g:'C',kind:'pax',seats:360,vmax:100,acc:0.3,price:16,epk:8,crew:7,comfort:1.5},
-  EMU_C:{name:'Automotrice électrique',g:'C',el:1,kind:'pax',seats:520,vmax:120,acc:0.7,price:15,epk:3,crew:3},
-  FRT_C:{name:'Fret diesel (2 locos, 40 wagons)',g:'C',kind:'frt',cap:1800,vmax:70,acc:0.15,price:11,epk:14,crew:3},
-  FRE_C:{name:'Fret électrique minerais',g:'C',el:1,kind:'frt',cap:2600,vmax:80,acc:0.2,price:15,epk:6,crew:2},
-  AUT_M:{name:'Autorail métrique',g:'M',kind:'pax',seats:140,vmax:80,acc:0.6,price:4,epk:4,crew:3},
-  PAX_M:{name:'Train voyageurs métrique',g:'M',kind:'pax',seats:500,vmax:70,acc:0.25,price:9,epk:8,crew:6},
-  FRT_M:{name:'Fret métrique',g:'M',kind:'frt',cap:1200,vmax:60,acc:0.15,price:8,epk:11,crew:3},
-  REG_S:{name:'Automotrice régionale',g:'S',el:1,kind:'pax',seats:300,vmax:160,acc:0.9,price:10,epk:5,crew:2},
-  SGR_S:{name:'Grandes lignes diesel (type SGR)',g:'S',kind:'pax',seats:1100,vmax:120,acc:0.3,price:25,epk:14,crew:8},
-  IC_S:{name:'Intercités électrique',g:'S',el:1,kind:'pax',seats:600,vmax:200,acc:0.5,price:22,epk:9,crew:4},
-  TGV_S:{name:'Grande vitesse 320',g:'S',el:1,kind:'pax',seats:510,vmax:320,acc:0.45,price:35,epk:16,crew:4},
-  HSX_S:{name:'Grande vitesse 16 voitures',g:'S',el:1,kind:'pax',seats:1300,vmax:300,acc:0.4,price:60,epk:28,crew:8},
-  FRT_S:{name:'Fret diesel voie normale',g:'S',kind:'frt',cap:3000,vmax:100,acc:0.15,price:14,epk:16,crew:2},
-  FRE_S:{name:'Fret électrique voie normale',g:'S',el:1,kind:'frt',cap:4000,vmax:100,acc:0.2,price:18,epk:7,crew:2}
+  KT12:{name:'Kasaï KT-12',g:'C',pax:150,t:23,vmax:90,acc:0.5,price:120000,fpk:3,lvl:1,liv:['#c0392b','#1d4ed8','#3b3b3b']},
+  MAY3:{name:'Mayombe DX-300',g:'C',pax:300,t:40,vmax:100,acc:0.4,price:260000,fpk:5,lvl:1,liv:['#f1c40f','#16a34a','#2d2d2d']},
+  UBM:{name:'Lomami M-120',g:'M',pax:120,t:15,vmax:70,acc:0.5,price:90000,fpk:2.5,lvl:1,liv:['#0e7490','#facc15','#334155']},
+  KIV6:{name:'Kivu Cargo 600',g:'C',pax:0,t:600,vmax:80,acc:0.2,price:380000,fpk:8,lvl:2,liv:['#7c2d12','#fbbf24','#292524']},
+  LUA4:{name:'Lualaba Express 450',g:'C',pax:450,t:57,vmax:110,acc:0.4,price:520000,fpk:6,lvl:3,liv:['#e5e7eb','#1e3a8a','#b91c1c']},
+  UEL2:{name:'Uele Couchettes',g:'C',pax:360,t:20,vmax:100,acc:0.3,price:450000,fpk:6,lvl:3,comfort:1.5,liv:['#14532d','#fde047','#1c1917']},
+  KAT15:{name:'Katanga Heavy 1500',g:'C',pax:0,t:1500,vmax:70,acc:0.15,price:900000,fpk:12,lvl:4,liv:['#1f2937','#f97316','#111827']},
+  FLE5:{name:'Fleuve E-500',g:'C',el:1,pax:500,t:30,vmax:130,acc:0.7,price:700000,epk:18,lvl:5,liv:['#f8fafc','#0ea5e9','#475569']},
+  ATL2:{name:'Atlantique S-200',g:'S',el:1,pax:200,t:0,vmax:200,acc:0.8,price:650000,epk:14,lvl:3,liv:['#f8fafc','#7e22ce','#64748b']},
+  SAH6:{name:'Sahel SGR-600',g:'S',pax:600,t:40,vmax:120,acc:0.3,price:800000,fpk:9,lvl:4,liv:['#166534','#facc15','#1f2937']},
+  FRE12:{name:'Fret Express E-1200',g:'S',el:1,pax:0,t:1200,vmax:120,acc:0.25,price:1100000,epk:30,lvl:6,liv:['#334155','#22c55e','#0f172a']},
+  COM3:{name:'Comète 320',g:'S',el:1,pax:500,t:0,vmax:320,acc:0.5,price:2500000,epk:35,lvl:8,liv:['#ffffff','#dc2626','#94a3b8']},
+  OKA:{name:'Okapi Prestige',g:'C',pax:240,t:10,vmax:120,acc:0.5,price:0,pts:400,fpk:4,lvl:2,comfort:1.6,liv:['#4c1d95','#f59e0b','#1e1b4b']}
 };
-
-/* opérateurs concurrents (noms réels ; horaires et chiffres du jeu = fictifs) : [opérateur, origine, destination, modèle, A/R par semaine, heure locale] */
-const RIVAL_LINES=[
-  ['SCTP','KIN','MAT','PAX_C',2,7],
-  ['SNCC','LUB','KWZ','PAX_C',2,8],['SNCC','LUB','KGA','PAX_C',1,9],['SNCC','LUB','KLM','PAX_C',1,10],['SNCC','KWZ','DAR','FRT_C',2,4],
-  ['SNCC','LUB','KND','PAX_C',1,11],['SNCC','KIS','UBD','AUT_M',2,8],
-  ['Lobito Atlantic Railway','KWZ','LOB','FRT_C',5,6],['Lobito Atlantic Railway','LOB','HUA','PAX_C',3,7],['CFB','LOB','LUA','PAX_C',2,6],
-  ['CFCO','PNR','BZV','PAX_C',3,7],['CFCO','LTT','PNR','FRT_C',3,5],
-  ['TAZARA','DAR','KPM','PAX_C',2,13],['TAZARA','NDL','DAR','FRT_C',3,9],['ZRL','LUN','LVS','PAX_C',2,19],['ZRL','KTW','LUN','PAX_C',3,8],
-  ['TRC','DAR','DOD','IC_S',14,6],['TRC','DAR','KGM','PAX_M',2,17],['Kenya Railways','MBA','NBO','SGR_S',14,8],
-  ['SETRAG','OWE','FCV','SGR_S',4,7],['SETRAG','MOG','OWE','FRT_S',14,3],['Camrail','DLA','YAO','PAX_M',7,7],
-  ['EDR','ADD','DJI','SGR_S',4,8],['NRC','LOS','IBA','SGR_S',14,7],['Shosholoza Meyl','JNB','CPT','PAX_C',2,10],['Transnet','KTW','DUR','FRT_C',3,6],
-  ['Gautrain','JNB','PRY','REG_S',140,5],['ONCF','TNG','CAS','TGV_S',63,6],['ONCF','CAS','RAK','IC_S',28,6],['ENR','CAI','ASW','SGR_S',7,8],
-  ['SNCF','PAR','LYS','HSX_S',140,6],['SNCF','PAR','MRS','TGV_S',63,6],['SNCF','PAR','BOD','TGV_S',105,6],['Eurostar','PAR','LON','TGV_S',105,6],
-  ['DB','FRA','BER','IC_S',70,6],['Renfe','MAD','BCN','TGV_S',105,6],['Trenitalia','MIL','ROM','TGV_S',140,6],
-  ['JR Central','TYO','OSA','HSX_S',700,6],['CR','PEK','SHA','HSX_S',700,6],['CR','PEK','CAN','HSX_S',280,7],['Amtrak','BOS','WAS','IC_S',112,6]
-];
-
-/* hubs proposés au départ */
-const START_HUBS=['KIN','LUB','BZV','PNR','KWZ','KGA','KIS','MAT','DAR','JNB','PAR'];
+for(const k in MODELS){ const m=MODELS[k]; m.kind=m.pax?'pax':'frt'; }
