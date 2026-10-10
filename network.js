@@ -14,15 +14,27 @@ const TRACK_FACTOR=1.18;                        // une voie serpente : ~18 % plu
 let NET={edges:[],byId:{},adj:{},ver:0};
 function buildNet(){
   const edges=[], mods={}, built=[];   // réseau réel (pas de construction dans cette version)
-  TRACKS.forEach((t,i)=>{ const o=t[6]; edges.push({id:'T'+i,a:t[0],b:t[1],v:t[2],g:t[3],el:t[4],tr:t[5],hs:!!o.hs,ferry:!!o.ferry,op:o.op||'',own:false,
-    km:o.km||Math.round(gcKm(t[0],t[1])*TRACK_FACTOR)}); });
+  const RG=typeof RAILGEO!=='undefined'?RAILGEO:{}, RK=typeof RAILKM!=='undefined'?RAILKM:{};
+  TRACKS.forEach((t,i)=>{ const o=t[6], k=t[0]+'|'+t[1]; edges.push({id:'T'+i,a:t[0],b:t[1],v:t[2],g:t[3],el:t[4],tr:t[5],hs:!!o.hs,ferry:!!o.ferry,op:o.op||'',own:false,
+    km:o.km||RK[k]||Math.round(gcKm(t[0],t[1])*TRACK_FACTOR),geo:RG[k]||null}); });
   for(const b of built) edges.push(Object.assign({hs:false,ferry:false,op:'Vous',own:true},b));
-  for(const e of edges){ const m=mods[e.id]; if(m) Object.assign(e,m); }
+  for(const e of edges){ const m=mods[e.id]; if(m) Object.assign(e,m); edgeGeo(e); }
   const adj={}; for(const c in STATIONS) adj[c]=[];
   for(const e of edges){ adj[e.a].push(e); adj[e.b].push(e); }
   NET={edges,byId:Object.fromEntries(edges.map(e=>[e.id,e])),adj,ver:NET.ver+1};
 }
 const other=(e,c)=>e.a===c?e.b:e.a;
+/* géométrie d'un tronçon : tracé réel si connu, sinon ligne droite ; fractions cumulées le long du tracé */
+function edgeGeo(e){ const A=STATIONS[e.a],B=STATIONS[e.b]; const g=e.geo||[[A.lo,A.la],[B.lo,B.la]]; const cf=[0]; let t=0;
+  for(let i=1;i<g.length;i++){ const dx=(g[i][0]-g[i-1][0])*Math.cos(rad((g[i][1]+g[i-1][1])/2)), dy=g[i][1]-g[i-1][1]; t+=Math.hypot(dx,dy); cf.push(t); }
+  e.line=g; e.cf=cf.map(x=>t?x/t:0); }
+/* point à la fraction f d'un tronçon, dans le sens from→… ; renvoie [lon,lat,cap en degrés] */
+function edgePoint(e,from,f){ if(e.a!==from) f=1-f; const g=e.line, cf=e.cf; let i=1; while(i<g.length-1&&cf[i]<f) i++;
+  const span=cf[i]-cf[i-1]||1, u=Math.max(0,Math.min(1,(f-cf[i-1])/span)), p=g[i-1], q=g[i];
+  let br=Math.atan2((q[0]-p[0])*Math.cos(rad(p[1])),q[1]-p[1])*180/Math.PI; if(e.a!==from) br+=180;
+  return [p[0]+(q[0]-p[0])*u,p[1]+(q[1]-p[1])*u,br]; }
+/* tracé complet d'une étape (pour dessiner une ligne) : [[lon,lat],…] */
+function legLine(leg){ const out=[]; for(let k=0;k<leg.edges.length;k++){ const e=leg.edges[k]; let g=e.line.slice(); if(e.a!==leg.nodes[k]) g.reverse(); if(out.length) g.shift(); out.push(...g); } return out; }
 function edgeOK(e,m){ if(e.hs||e.v<=0) return false; if(e.ferry) return true; if(m&&e.g!==m.g) return false; if(m&&m.el&&!e.el) return false; return true; }
 const effV=(e,m)=>e.ferry?e.v:Math.min(e.v,m?m.vmax:e.v);
 
@@ -84,9 +96,9 @@ function buildRoute(a,b,m,stopMode,stopSet){
 /* position sur une étape à l'instant dt (ms depuis le départ) → {ll:[lat,lon], kmh, at?} */
 function legPos(leg,dt){
   let seg=leg.segs[leg.segs.length-1]; for(const s of leg.segs) if(dt<s.t1){ seg=s; break; }
-  if(seg.type==='dwell'){ const c=leg.nodes[seg.i]; return {ll:[STATIONS[c].la,STATIONS[c].lo],kmh:0,at:c}; }
+  if(seg.type==='dwell'){ const c=leg.nodes[seg.i]; return {ll:[STATIONS[c].la,STATIONS[c].lo],lnglat:[STATIONS[c].lo,STATIONS[c].la],bearing:0,kmh:0,at:c}; }
   const t=Math.max(0,dt-seg.t0), s=seg.km0+seg.P.s(t), kmh=Math.round((seg.P.s(t+2000)-seg.P.s(t))*1800);
   let k=seg.i0; while(k<seg.i1-1&&leg.cum[k+1]<s) k++;
-  const A=STATIONS[leg.nodes[k]],B=STATIONS[leg.nodes[k+1]], f=Math.max(0,Math.min(1,(s-leg.cum[k])/(leg.cum[k+1]-leg.cum[k]||1)));
-  return {ll:[A.la+(B.la-A.la)*f,A.lo+(B.lo-A.lo)*f],kmh,next:leg.nodes[seg.i1]};
+  const f=Math.max(0,Math.min(1,(s-leg.cum[k])/(leg.cum[k+1]-leg.cum[k]||1))), p=edgePoint(leg.edges[k],leg.nodes[k],f);
+  return {ll:[p[1],p[0]],lnglat:[p[0],p[1]],bearing:p[2],kmh,next:leg.nodes[seg.i1]};
 }

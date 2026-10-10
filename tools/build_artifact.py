@@ -8,10 +8,9 @@ h = re.sub(r'<meta (charset|name="viewport")[^>]*>\s*', '', h)
 h = re.sub(r'<link rel="(manifest|apple-touch-icon)"[^>]*>\s*', '', h)
 h = re.sub(r'<script>if\(\'serviceWorker\'.*?</script>\s*', '', h)
 def safe(js): return js.replace('</script', '<\\/script')
-import base64
-css = open('vendor/leaflet.css', encoding='utf-8').read()
-css = re.sub(r'url\(images/([\w-]+\.png)\)', lambda m: 'url(data:image/png;base64,' + base64.b64encode(open('vendor/images/' + m.group(1), 'rb').read()).decode() + ')', css)
-h = h.replace('<link rel="stylesheet" href="vendor/leaflet.css">', '<style>' + css + '</style>')
+def inline_css(m):
+    return '<style>' + open(m.group(1), encoding='utf-8').read() + '</style>'
+h = re.sub(r'<link rel="stylesheet" href="(vendor/[\w.-]+\.css)">', inline_css, h)
 def inline(m):
     return '<script>' + safe(open(m.group(1), encoding='utf-8').read()) + '</script>'
 h = re.sub(r'<script src="([\w/.-]+\.js)(?:\?v=[\d.]+)?"></script>', inline, h)

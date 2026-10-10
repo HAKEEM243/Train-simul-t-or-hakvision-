@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'); const store={};
 let clock=Date.UTC(2026,9,10,8,0);
 const ctx={console,Math,JSON,Object,Array,Map,Set,String,Number,Infinity,isFinite,localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=String(v)}}};
 ctx.Date=class extends Date{ constructor(...a){ super(...(a.length?a:[clock])); } static now(){ return clock; } }; ctx.Date.UTC=Date.UTC;
-vm.createContext(ctx); for(const f of ['data.js','data-world.js','network.js','game.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),ctx,{filename:f});
+vm.createContext(ctx); for(const f of ['data.js','data-world.js','rails.js','network.js','game.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),ctx,{filename:f});
 const run=c=>vm.runInContext(c,ctx); let fails=0; const ok=(c,m)=>{ console.log(c?'ok  ':'ÉCHEC',m); if(!c) fails++; };
 run(`newGame('Test','KIN')`);
 ok(run(`G.trains.length===1&&G.points===200`),'partie : 1 train, 200 points');

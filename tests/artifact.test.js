@@ -3,17 +3,20 @@
 //  node tests/artifact.test.js              → dossier servi en local, avec rechargement et reprise de la sauvegarde
 const {chromium}=require('playwright'), fs=require('fs'), http=require('http'), path=require('path');
 const ROOT=path.join(__dirname,'..'), OUT=process.env.OUT||'/tmp', single=process.argv[2];
-const CSP="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: blob:; font-src https://fonts.gstatic.com";
+const CSP="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src https://fonts.gstatic.com; connect-src 'self'; worker-src blob:; child-src blob:";
+const TYPE=f=>f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.css')?'text/css':f.endsWith('.js')?'application/javascript':f.endsWith('.json')?'application/json':'application/octet-stream';
 const srv=http.createServer((q,r)=>{ const u=decodeURIComponent(q.url.split('?')[0]);
   if(single){ if(u==='/inner'){ r.writeHead(200,{'content-type':'text/html; charset=utf-8','content-security-policy':CSP});
       r.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>'+fs.readFileSync(single,'utf8')+'</body></html>'); }
-    else { r.writeHead(200,{'content-type':'text/html'}); r.end('<html><body style="margin:0"><iframe sandbox="allow-scripts" src="/inner" style="border:0;width:100vw;height:100vh"></iframe></body></html>'); } return; }
-  const f=path.join(ROOT,u==='/'?'index.html':u); fs.readFile(f,(e,d)=>{ if(e){ r.writeHead(404); r.end(); return; } r.writeHead(200,{'content-type':f.endsWith('.html')?'text/html; charset=utf-8':f.endsWith('.css')?'text/css':f.endsWith('.json')?'application/json':'application/javascript'}); r.end(d); }); }).listen(8766);
+    else if(u==='/'){ r.writeHead(200,{'content-type':'text/html'}); r.end('<html><body style="margin:0"><iframe sandbox="allow-scripts" src="/inner" style="border:0;width:100vw;height:100vh"></iframe></body></html>'); }
+    else if(u.startsWith('/map/')){ fs.readFile(path.join(ROOT,u),(e,d)=>{ if(e){ r.writeHead(404); r.end(); return; } r.writeHead(200,{'content-type':TYPE(u),'access-control-allow-origin':'*'}); r.end(d); }); }
+    else { r.writeHead(404); r.end(); } return; }
+  const f=path.join(ROOT,u==='/'?'index.html':u); fs.readFile(f,(e,d)=>{ if(e){ r.writeHead(404); r.end(); return; } r.writeHead(200,{'content-type':TYPE(f)}); r.end(d); }); }).listen(8766);
 (async()=>{ let fails=0; const ok=(c,m)=>{ console.log(c?'ok  ':'ÉCHEC',m); if(!c) fails++; };
-  const b=await chromium.launch(); const errs=[];
+  const b=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']}); const errs=[];
   for(const [w,h,tag] of [[1280,820,'bureau'],[390,844,'mobile']]){
     const ctx=await b.newContext({viewport:{width:w,height:h}}), p=await ctx.newPage();
-    p.on('pageerror',e=>errs.push(tag+': '+e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/tile\.openstreetmap|fonts\.g|ERR_|Failed to load resource/.test(m.text())) errs.push(tag+' console: '+m.text()); });
+    p.on('pageerror',e=>errs.push(tag+': '+e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errs.push(tag+' console: '+m.text()); });
     await p.goto('http://localhost:8766/'); await p.waitForTimeout(1200); const f=single?p.frames()[1]:p;
     ok(/COMMENCER/.test(await f.textContent('#modal')),tag+' écran de nouvelle partie');
     await f.click('[data-act=startgame]'); await f.click('#modal [data-act=close]');
@@ -32,13 +35,13 @@ const srv=http.createServer((q,r)=>{ const u=decodeURIComponent(q.url.split('?')
     await f.evaluate(()=>openModal('train',G.trains[0].id)); await f.waitForTimeout(200);
     ok(/EN DIRECT/.test(await f.textContent('#modal'))&&/CONTRÔLEURS/.test(await f.textContent('#modal')),tag+' fiche du train : voyageurs en direct et contrôleurs');
     await p.screenshot({path:`${OUT}/tm-${tag}-8-direct.png`}); await f.evaluate(()=>closeModal());
-    ok(await f.evaluate(()=>document.querySelectorAll('.tm.enroute').length===1),tag+' train sur la carte'); await p.screenshot({path:`${OUT}/tm-${tag}-4-carte.png`});
+    await f.waitForFunction(()=>typeof TRAIN_COUNT!=='undefined'&&TRAIN_COUNT>=1,null,{timeout:15000}).catch(()=>{}); ok(await f.evaluate(()=>MAP_READY&&TRAIN_COUNT>=1),tag+' carte chargée, train sur la carte'); await p.screenshot({path:`${OUT}/tm-${tag}-4-carte.png`});
     const cash=await f.evaluate(()=>G.cash); await f.evaluate(()=>{ G.trains[0].dep-=20*60e3; }); await f.waitForTimeout(900);
     ok(await f.evaluate(c=>G.cash>c&&G.trains[0].state==='station',cash),tag+' arrivée et recette');
     await f.click('#hex [data-v=world]'); await f.waitForSelector('.regions'); await p.screenshot({path:`${OUT}/tm-${tag}-6-monde.png`});
     await f.evaluate(()=>{ G.cash=3e6; }); await f.click('.regions button:nth-child(6)'); await f.waitForTimeout(300);
     await f.evaluate(()=>openModal('station','PAR')); await f.click('[data-act=hub][data-v=PAR]'); await f.waitForTimeout(300);
-    ok(await f.evaluate(()=>G.hubs.includes('PAR')&&document.querySelectorAll('.hubmk').length>=2),tag+' hub établi à Paris, étoiles sur la carte');
+    ok(await f.evaluate(()=>G.hubs.includes('PAR')&&hubsFC().features.length>=2&&MAP_READY),tag+' hub établi à Paris, étoile sur la carte');
     await f.evaluate(()=>closeModal()); await p.screenshot({path:`${OUT}/tm-${tag}-7-europe.png`});
     for(const m of ['check','shop','company','fuel','finance','service','mail','settings']){ await f.evaluate(n=>openModal(n),m); await f.waitForTimeout(80); if(m==='fuel'||m==='check') await p.screenshot({path:`${OUT}/tm-${tag}-5-${m}.png`}); }
     ok(true,tag+' toutes les fenêtres s\'ouvrent');

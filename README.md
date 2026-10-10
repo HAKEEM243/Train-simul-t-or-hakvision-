@@ -7,6 +7,17 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 - En local : ouvrez `index.html` via un petit serveur (`npx http-server .` puis http://localhost:8080).
 - En ligne : GitHub Pages (voir plus bas). Sur iPhone : Safari → Partager → « Sur l'écran d'accueil » (appli installable, fonctionne hors-ligne).
 
+## La carte
+Une vraie carte fabriquée pour le jeu (aucun service en ligne nécessaire) :
+- **relief ombré** calculé à partir des altitudes et profondeurs du monde entier (tuiles Terrarium de Mapzen, AWS Open Data),
+  couleurs naturelles (forêt équatoriale, savane, déserts, glaciers, fonds marins), plus de détail sur l'Afrique, l'Europe et le Congo ;
+- **voies ferrées sur leur tracé réel** (Natural Earth) : 445 tronçons sur 459 suivent les courbes des vraies lignes, longueurs réelles ;
+- fleuves, lacs, frontières, noms des pays, des mers et des régions (Sahara, bassin du Congo, Katanga…) ;
+- moteur **MapLibre GL** : zoom fluide, rotation, **vue 3D inclinée** ; trains animés qui suivent les courbes.
+
+Fichiers : `map/packs/` (tuiles WebP empaquetées), `map/fonts/` (Noto Sans, licence OFL), `mapdata.js`, `rails.js`.
+Outils pour les régénérer : `tools/build_relief.py`, `tools/build_rails.py` (+ `tools/export_net.js`), `tools/build_mapdata.py`.
+
 ## Le jeu
 Jeu de gestion de trains en temps réel (accéléré), centré sur le **Congo** :
 - **Hubs dans le monde entier** : chaque ligne part d'un de vos hubs ; établissez-en au Congo, en Afrique, en Europe, en Russie, en Inde, en Chine, en Amérique, en Océanie (444 gares, 79 pays, fenêtre MONDE pour voyager).
@@ -31,8 +42,8 @@ Les noms de trains, illustrations et textes sont propres à ce jeu.
 | `data-world.js` | reste du monde : gares, voies, écartements B et R, trains, villes de départ, régions de la carte |
 | `network.js` | graphe des voies, plus court chemin compatible, profils de vitesse, itinéraires avec arrêts |
 | `game.js` | état unique `G`, trains, itinéraires, départs/arrivées, carburant, usure, objectifs, boutique, sauvegarde |
-| `ui.js` | carte, barre du haut, menu, liste des trains, fenêtres, sauvegarde en ligne |
-| `world.js` | fond de carte Natural Earth simplifié (généré par `tools/build_world.py`) |
+| `map.js` | carte MapLibre : relief, couches, voies, lignes, gares, trains animés, vue 3D |
+| `ui.js` | barre du haut, menu, liste des trains, fenêtres, sauvegarde en ligne |
 | `sw.js`, `manifest.json` | appli installable, hors-ligne |
 
 Principes : **la position d'un train est une fonction du temps** (calculée depuis l'horaire), un seul état `S` sauvegardé,
@@ -52,4 +63,4 @@ Coordonnées et populations : approximatives. Vitesses, états des voies, coûts
 ## Publication sur GitHub Pages
 Dans le dépôt GitHub : *Settings → Pages → Source : GitHub Actions*. Chaque push sur `main` lance les tests puis publie le jeu.
 
-Crédits : [Leaflet](https://leafletjs.com) (BSD-2), fond de carte [Natural Earth](https://www.naturalearthdata.com) (domaine public).
+Crédits : [MapLibre GL JS](https://maplibre.org) (BSD-3), [Natural Earth](https://www.naturalearthdata.com) (domaine public), altitudes [Mapzen Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (sources : SRTM, GMTED, ETOPO1… libres), polices Noto Sans (OFL).

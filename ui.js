@@ -2,10 +2,9 @@
    Hakvision Rail — interface : carte claire, barre du haut, menu hexagonal, tiroir des trains, fenêtres.
    ========================================================= */
 'use strict';
-const APP_V='2.2.0';
+const APP_V='3.0.0';
 const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const UI={drawer:false,dtab:'station',sel:new Set(),modal:null,mtab:{yard:'fleet'},fleetFilter:'all',model:null,form:{train:null,a:'KIN',b:null,stop:'omni',name:''}};
-let map,LY={},TM=new Map();
 
 /* ---------- icônes (SVG simples) ---------- */
 const P={
@@ -36,79 +35,51 @@ const ico=(n,s)=>`<svg class="ic" viewBox="0 0 24 24" width="${s||22}" height="$
 const BUS='<svg viewBox="0 0 32 20" width="26" height="17" aria-hidden="true"><rect x="1" y="2" width="30" height="13" rx="4" fill="#111"/><rect x="5" y="5" width="5" height="4" rx="1" fill="#fff"/><rect x="12" y="5" width="5" height="4" rx="1" fill="#fff"/><rect x="19" y="5" width="8" height="4" rx="1" fill="#fff"/><circle cx="8" cy="17" r="2.3" fill="#111"/><circle cx="24" cy="17" r="2.3" fill="#111"/></svg>';
 const CARGO='<svg viewBox="0 0 32 20" width="26" height="17" aria-hidden="true"><rect x="1" y="3" width="30" height="12" rx="1.5" fill="#111"/><path d="M6 4v10M11 4v10M16 4v10M21 4v10M26 4v10" stroke="#fff" stroke-width="1.4"/><circle cx="7" cy="17" r="2.3" fill="#111"/><circle cx="25" cy="17" r="2.3" fill="#111"/></svg>';
 
-/* ---------- illustration d'un train (dessinée, pas de photo) ---------- */
+/* ---------- illustration d'un train : dessin vectoriel détaillé (pas une photo) ---------- */
 let artN=0;
-function trainArt(k){ const m=MODELS[k], [b,s,r]=m.liv, id='a'+(artN++), frt=m.kind==='frt';
-  const wheels=xs=>xs.map(x=>`<circle cx="${x}" cy="112" r="7" fill="#1f1f1f"/><circle cx="${x}" cy="112" r="2.5" fill="#888"/>`).join('');
-  const loco=frt?`<rect x="18" y="58" width="96" height="48" rx="6" fill="${b}"/><rect x="18" y="80" width="96" height="7" fill="${s}"/><rect x="24" y="52" width="70" height="10" rx="3" fill="${r}"/>
-     <rect x="88" y="64" width="20" height="13" rx="2" fill="#bfe3ff"/>${wheels([34,56,82,102])}
-     <rect x="122" y="66" width="72" height="40" rx="3" fill="${s}" opacity=".9"/><rect x="200" y="66" width="72" height="40" rx="3" fill="${b}" opacity=".85"/>
-     ${[130,148,166,184,208,226,244,262].map(x=>`<rect x="${x}" y="70" width="3" height="32" fill="#0003"/>`).join('')}${wheels([136,180,214,258])}`
-   :`<path d="M22 60h190q38 0 52 22v24H22z" fill="${b}"/><rect x="22" y="86" width="242" height="8" fill="${s}"/><rect x="30" y="52" width="170" height="10" rx="4" fill="${r}"/>
-     ${[34,62,90,118,146,174].map(x=>`<rect x="${x}" y="67" width="20" height="13" rx="2" fill="#2b3f5c"/>`).join('')}<path d="M214 66h20l22 18h-42z" fill="#2b3f5c"/>
-     ${m.el?`<path d="M110 52l14-16 14 16M117 36h28" stroke="#333" stroke-width="2.2" fill="none"/>`:''}${wheels([46,74,190,218])}`;
-  return `<svg viewBox="0 0 300 130" class="art" role="img" aria-label="${esc(m.name)}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe9f7"/><stop offset=".62" stop-color="#eef7e4"/><stop offset=".63" stop-color="#7a9a4c"/><stop offset="1" stop-color="#4f6f2c"/></linearGradient></defs>
-    <rect width="300" height="130" fill="url(#${id})"/><circle cx="40" cy="40" r="16" fill="#3f6d2a" opacity=".55"/><circle cx="260" cy="36" r="20" fill="#3f6d2a" opacity=".5"/>
-    <rect x="0" y="118" width="300" height="5" fill="#6b5a4a"/>${Array.from({length:16},(_,i)=>`<rect x="${i*20}" y="116" width="10" height="9" fill="#5a4636"/>`).join('')}<rect x="0" y="117" width="300" height="2" fill="#bbb"/>${loco}</svg>`; }
+function trainArt(k){ const m=MODELS[k], [b,s,r]=m.liv, id='a'+(artN++), frt=m.kind==='frt', hs=m.vmax>=250, el=!!m.el;
+  const G=(n,stops,dir)=>`<linearGradient id="${id}${n}" x1="0" y1="0" x2="${dir==='h'?1:0}" y2="${dir==='h'?0:1}">${stops.map(([o,c,a])=>`<stop offset="${o}" stop-color="${c}"${a!=null?` stop-opacity="${a}"`:''}/>`).join('')}</linearGradient>`;
+  const bogie=x=>`<g transform="translate(${x} 0)"><rect x="-17" y="104" width="34" height="7" rx="2" fill="#2a2d33"/><circle cx="-9" cy="113" r="7.5" fill="#1b1d21"/><circle cx="9" cy="113" r="7.5" fill="#1b1d21"/>
+    <circle cx="-9" cy="113" r="4.6" fill="url(#${id}w)"/><circle cx="9" cy="113" r="4.6" fill="url(#${id}w)"/><circle cx="-9" cy="113" r="1.4" fill="#111"/><circle cx="9" cy="113" r="1.4" fill="#111"/><rect x="-14" y="107" width="28" height="2" fill="#555b66"/></g>`;
+  // caisse : nez profilé (grande vitesse), cabine plate (fret), nez arrondi (voyageurs)
+  const nose=hs?`M24 62 H206 C238 62 262 76 276 100 L276 104 H24 Z`:frt?`M24 58 H178 Q186 58 186 66 V104 H24 Z`:`M24 60 H222 Q246 60 254 78 L258 104 H24 Z`;
+  const winY=frt?66:70, wins=frt?'':Array.from({length:hs?8:7},(_,i)=>`<rect x="${36+i*24}" y="${winY}" width="17" height="12" rx="2.5" fill="url(#${id}g)"/>`).join('');
+  const cab=hs?`<path d="M214 66 C236 67 252 78 262 92 L230 92 Q222 92 218 86 Z" fill="url(#${id}g)"/>`:frt?`<rect x="160" y="64" width="20" height="14" rx="2" fill="url(#${id}g)"/>`:`<path d="M226 66 Q242 67 248 82 L226 82 Z" fill="url(#${id}g)"/>`;
+  const wagon=frt?`<g><rect x="190" y="70" width="104" height="34" rx="2" fill="url(#${id}c)"/>${[198,214,230,246,262,278].map(x=>`<rect x="${x}" y="74" width="3" height="26" fill="rgba(0,0,0,.18)"/>`).join('')}<rect x="190" y="70" width="104" height="5" fill="rgba(255,255,255,.18)"/>${bogie(212)}${bogie(272)}</g>`:'';
+  const panto=el?`<g stroke="#2b2f36" stroke-width="2.2" fill="none" stroke-linecap="round"><path d="M96 ${hs?62:60} l14 -16 l14 16"/><path d="M104 44 h28"/></g><path d="M0 40 H300" stroke="#3b3f47" stroke-width="1.2"/><path d="M0 34 H300" stroke="#3b3f47" stroke-width=".8"/>`:'';
+  return `<svg viewBox="0 0 300 130" class="art" role="img" aria-label="${esc(m.name)}"><defs>
+    ${G('sky',[[0,'#1c3554'],[0.55,'#c98d5a'],[1,'#f2c78a']])}${G('hill',[[0,'#3e5a3a'],[1,'#2a3f2a']])}
+    ${G('b',[[0,'#fff',0.55],[0.18,b],[0.8,b],[1,'#000',0.55]])}${G('c',[[0,s],[1,shadeHex(s,-40)]])}${G('g',[[0,'#bfe2ff'],[0.5,'#3d6c95'],[1,'#1a2f45']])}
+    ${G('w',[[0,'#9aa2ad'],[1,'#4b525c']])}${G('bal',[[0,'#6f665c'],[1,'#3e3833']])}
+    <radialGradient id="${id}l" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff6c8"/><stop offset="1" stop-color="#fff6c8" stop-opacity="0"/></radialGradient></defs>
+    <rect width="300" height="130" fill="url(#${id}sky)"/><circle cx="62" cy="58" r="16" fill="#ffe2a6" opacity=".85"/>
+    <path d="M0 92 Q40 70 80 86 T170 80 T260 84 T300 78 V130 H0 Z" fill="url(#${id}hill)" opacity=".9"/>
+    <path d="M0 98 Q70 88 150 96 T300 92 V130 H0 Z" fill="#26361f"/>
+    ${panto}
+    <rect x="0" y="116" width="300" height="14" fill="url(#${id}bal)"/>${Array.from({length:21},(_,i)=>`<rect x="${i*15-2}" y="118" width="9" height="4" rx="1" fill="#2c2620"/>`).join('')}
+    <rect x="0" y="119" width="300" height="2" fill="#c9ced6"/><rect x="0" y="121" width="300" height="1" fill="#6d737c"/>
+    ${wagon}
+    <path d="${nose}" fill="url(#${id}b)"/><path d="${nose}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1"/>
+    <rect x="24" y="${frt?86:88}" width="${hs?250:frt?162:232}" height="6" fill="${s}"/><rect x="24" y="${frt?92:94}" width="${hs?250:frt?162:232}" height="2" fill="${shadeHex(s,-50)}"/>
+    <rect x="30" y="${hs?58:frt?52:55}" width="${frt?120:170}" height="${frt?8:6}" rx="3" fill="${r}"/>
+    ${wins}${cab}
+    <circle cx="${hs?270:frt?183:252}" cy="${frt?96:97}" r="9" fill="url(#${id}l)"/><circle cx="${hs?270:frt?183:252}" cy="${frt?96:97}" r="2.4" fill="#fffbe0"/>
+    <rect x="24" y="100" width="${hs?252:frt?162:234}" height="4" fill="rgba(0,0,0,.45)"/>
+    ${frt?bogie(52)+bogie(156):bogie(64)+bogie(210)}
+    <text x="34" y="${frt?83:86}" font-family="Saira Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="8" fill="${shadeHex(b,-120)}" opacity=".7">HAKVISION</text></svg>`; }
+function shadeHex(hex,d){ const n=parseInt(hex.slice(1),16), f=v=>Math.max(0,Math.min(255,v+d)).toString(16).padStart(2,'0'); return '#'+f(n>>16)+f(n>>8&255)+f(n&255); }
 
 /* ---------- barre du haut ---------- */
 function ring(pct,color,icon){ const C=2*Math.PI*21, d=Math.max(0,Math.min(1,pct))*C;
-  return `<svg viewBox="0 0 50 50" width="54" height="54"><circle cx="25" cy="25" r="21" stroke="#3a4479" stroke-width="5" fill="#141b46"/><circle cx="25" cy="25" r="21" stroke="${color}" stroke-width="5" fill="none" stroke-dasharray="${d} ${C}" transform="rotate(-90 25 25)" stroke-linecap="round"/></svg><span>${ico(icon,20)}</span>`; }
+  return `<svg viewBox="0 0 50 50" width="46" height="46"><circle cx="25" cy="25" r="21" stroke="rgba(255,255,255,.12)" stroke-width="5" fill="rgba(0,0,0,.2)"/><circle cx="25" cy="25" r="21" stroke="${color}" stroke-width="5" fill="none" stroke-dasharray="${d} ${C}" transform="rotate(-90 25 25)" stroke-linecap="round"/></svg><span>${ico(icon,20)}</span>`; }
 function renderTop(){
   $('#acc').textContent=fmt$(G.cash); $('#pts').textContent=G.points.toLocaleString('fr');
-  $('#g-fuel').innerHTML=ring(G.fuel/G.fuelCap,'#1e88ff','fuel'); $('#g-en').innerHTML=ring(G.energy/G.energyCap,'#ffc21a','bolt');
+  $('#g-fuel').innerHTML=ring(G.fuel/G.fuelCap,'#4ea3ff','fuel'); $('#g-en').innerHTML=ring(G.energy/G.energyCap,'#f5a524','bolt');
   const unread=G.mail.filter(m=>!m.read).length; $('#b-mail').innerHTML=ico('mail',30)+(unread?`<i class="badge">${unread}</i>`:'');
   const h=G.priceHist, p=sharePrice(), prev=h.length>6?h[h.length-7].p:(h[0]?h[0].p:p), up=p>=prev;
-  $('#co').innerHTML=`${ico('building',22)}<b>${esc(G.name.toUpperCase())}</b><span class="${up?'up':'dn'}">${ico(up?'up':'down',20)} $${p.toFixed(2)}</span>`;
+  $('#co').innerHTML=`<span class="logo"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 3l-3 18M16 3l3 18M6.4 9h11.2M5.6 15h12.8"/></svg></span><span class="who"><b>${esc(G.name.toUpperCase())}</b><span class="${up?'up':'dn'}">${ico(up?'up':'down',16)} $${p.toFixed(2)}</span></span>`;
   const cl=claimable(); $('#h-check').classList.toggle('alert',cl>0); $('#h-check').dataset.n=cl||'';
   renderSaved(); }
-
-/* ---------- carte ---------- */
-function initMap(){
-  map=L.map('map',{zoomControl:false,worldCopyJump:true,minZoom:3,maxZoom:13}).setView([-6,21],5);
-  map.attributionControl.setPrefix(false).addAttribution('Natural Earth · Leaflet');
-  map.createPane('base'); map.getPane('base').style.zIndex=200; map.createPane('rails'); map.getPane('rails').style.zIndex=350;
-  const base=L.layerGroup().addTo(map), canvas=L.canvas({pane:'base'}), poly=r=>r.map(p=>[p[1],p[0]]);
-  LY.clabels=[];
-  for(const [,name,polys] of WORLD.countries){ let best=null,ba=0;
-    for(const pl of polys){ L.polygon(pl.map(poly),{renderer:canvas,pane:'base',color:'#b79fc7',weight:1,dashArray:'5 4',fillColor:'#f2efe9',fillOpacity:1,interactive:false}).addTo(base);
-      const r=pl[0], xs=r.map(p=>p[0]), ys=r.map(p=>p[1]), a=(Math.max(...xs)-Math.min(...xs))*(Math.max(...ys)-Math.min(...ys)); if(a>ba){ ba=a; best=[(Math.max(...ys)+Math.min(...ys))/2,(Math.max(...xs)+Math.min(...xs))/2,a]; } }
-    if(best&&best[2]>2) LY.clabels.push({ll:[best[0],best[1]],name,a:best[2]}); }
-  for(const ps of WORLD.lakes) for(const pl of ps) L.polygon(pl.map(poly),{renderer:canvas,pane:'base',stroke:false,fillColor:'#aad3df',fillOpacity:1,interactive:false}).addTo(base);
-  for(const [,line] of WORLD.rivers) L.polyline(line.map(p=>[p[1],p[0]]),{renderer:canvas,pane:'base',color:'#aad3df',weight:1.6,interactive:false}).addTo(base);
-  LY.base=base; LY.clab=L.layerGroup().addTo(map); LY.rails=L.layerGroup().addTo(map); LY.routes=L.layerGroup().addTo(map); LY.st=L.layerGroup().addTo(map); LY.trains=L.layerGroup().addTo(map);
-  // fond OpenStreetMap si le réseau le permet (sinon on garde la carte intégrée, qui marche hors-ligne)
-  const probe=new Image(); probe.onload=()=>{ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abc',attribution:'© OpenStreetMap'}).addTo(map); map.removeLayer(base); map.removeLayer(LY.clab); };
-  probe.src='https://a.tile.openstreetmap.org/3/4/4.png';
-  map.on('zoomend',()=>{ drawLabels(); drawStations(); });
-  net(); drawRails(); drawLabels(); drawRoutes(); }
-function drawLabels(){ LY.clab.clearLayers(); const z=map.getZoom();
-  for(const c of LY.clabels) if(c.a>(z>=6?1:z>=5?3:z>=4?20:80)) L.marker(c.ll,{icon:L.divIcon({className:'clab',html:esc(c.name),iconSize:[160,20],iconAnchor:[80,10]}),interactive:false,pane:'base'}).addTo(LY.clab); }
-let railsOn=true;
-function drawRails(){ LY.rails.clearLayers(); if(!railsOn) return;
-  for(const e of NET.edges){ const A=STATIONS[e.a],B=STATIONS[e.b]; L.polyline([[A.la,A.lo],[B.la,B.lo]],{pane:'rails',color:e.hs?'#b9b2a8':'#7d7d7d',weight:e.tr>=2?2.4:1.6,opacity:.8,dashArray:e.hs||e.ferry?'3 5':null,interactive:false}).addTo(LY.rails); } }
-const STAR='<svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 2l2.9 6.6 7.1.7-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.3l7.1-.7z" fill="#ffcc1a" stroke="#1b2257" stroke-width="1.6" stroke-linejoin="round"/></svg>';
-function drawStations(){ LY.st.clearLayers();
-  for(const c of G.hubs){ const s=STATIONS[c]; L.marker([s.la,s.lo],{icon:L.divIcon({className:'hubmk',html:STAR,iconSize:[30,30],iconAnchor:[15,15]}),zIndexOffset:300}).addTo(LY.st).on('click',()=>openModal('station',c)); } const z=map.getZoom(), used=new Set(G.routes.flatMap(r=>geom(r)?geom(r).out.stops.map(s=>s.code):[]));
-  for(const s of Object.values(STATIONS)){ const big=s.p>=1, cg=s.c==='CD'||s.c==='CG', show=G.hubs.includes(s.code)||used.has(s.code)||z>=7||(z>=5&&(s.p>=0.2||cg))||(z>=4&&s.p>=1.5)||s.p>=8;
-    if(!show) continue; const mk=L.circleMarker([s.la,s.lo],{radius:big?4:3,color:'#555',weight:1,fillColor:'#fff',fillOpacity:1,pane:'rails'}).addTo(LY.st);
-    mk.bindTooltip(esc(s.n),{permanent:true,direction:'right',offset:[4,0],className:'slab'+(big?' big':'')}); mk.on('click',()=>openModal('station',s.code)); } }
-function drawRoutes(){ LY.routes.clearLayers();
-  for(const r of G.routes){ const g=geom(r); if(!g) continue; const ll=g.out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]);
-    L.polyline(ll,{color:r.color,weight:7,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(LY.routes).on('click',()=>openModal('route',r.id));
-    for(const s of g.out.stops) L.circleMarker([STATIONS[s.code].la,STATIONS[s.code].lo],{radius:6,color:r.color,weight:4,fillColor:'#fff',fillOpacity:1}).addTo(LY.routes).on('click',()=>openModal('station',s.code)); }
-  drawStations(); }
-function trainLL(tr){ const r=routeOfTrain(tr); if(!r) return null; const g=geom(r); if(!g) return null;
-  if(tr.state==='enroute'){ const leg=g[tr.dir], f=Math.min(1,(now()-tr.dep)/tr.dur); return legPos(leg,f*leg.T); }
-  if(tr.state==='station'){ const c=tr.at==='a'?r.a:r.b; return {ll:[STATIONS[c].la,STATIONS[c].lo],kmh:0,at:c}; } return null; }
-function updateTrains(){ const seen=new Set();
-  for(const tr of G.trains){ const p=trainLL(tr); if(!p) continue; seen.add(tr.id); const r=routeOfTrain(tr); let mk=TM.get(tr.id);
-    const html=`<div class="tm ${tr.state}" style="--c:${r.color}">${MODELS[tr.model].kind==='frt'?CARGO:BUS}</div>`;
-    if(!mk){ mk=L.marker(p.ll,{icon:L.divIcon({className:'',html,iconSize:[44,44],iconAnchor:[22,22]}),zIndexOffset:500}).addTo(LY.trains); mk.on('click',()=>openModal('train',tr.id)); mk._h=html; TM.set(tr.id,mk); }
-    else if(mk._h!==html){ mk.setIcon(L.divIcon({className:'',html,iconSize:[44,44],iconAnchor:[22,22]})); mk._h=html; }
-    mk.setLatLng(p.ll); }
-  for(const [id,mk] of TM) if(!seen.has(id)){ LY.trains.removeLayer(mk); TM.delete(id); } }
-function fitAll(){ const pts=G.routes.flatMap(r=>geom(r)?geom(r).out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]):[]); if(pts.length) map.fitBounds(pts,{padding:[60,60],maxZoom:8}); else map.setView([STATIONS[G.start].la,STATIONS[G.start].lo],6); }
 
 /* ---------- tiroir des trains (en route / à la gare / au dépôt / en attente) ---------- */
 const DTABS=[['enroute','send','EN ROUTE'],['station','train','À LA GARE'],['yard','yard','AU DÉPÔT'],['pending','clock','EN ATTENTE']];
@@ -291,7 +262,7 @@ const ACT={
   routefrom:b=>{ const c=b.dataset.v, tr=G.trains.find(t=>(t.state==='yard'||t.state==='station')&&reachable(c,MODELS[t.model]).size); if(!tr){ toast('Aucun train libre ne peut rouler ici : commandez-en un adapté.','bad'); return; } startEdit(null,tr.id,c); },
   mkroute:()=>{ const f=UI.form; if(res(createRoute(f.train,f.a,f.b,f.stop,f.name.trim()),'Itinéraire créé ! Faites partir le train depuis « À la gare ».')){ f.name=''; drawRoutes(); updateTrains(); fitAll(); closeModal(); UI.drawer=true; UI.dtab='station'; renderDrawer(); saveAll(); } },
   delroute:b=>{ if(!armed(b,'Confirmer ?')) return; if(res(deleteRoute(+b.dataset.v),'Ligne supprimée.')){ closeModal(); drawRoutes(); renderDrawer(); saveAll(); } },
-  zoomroute:b=>{ const r=routeById(+b.dataset.v); closeModal(); map.fitBounds(geom(r).out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]),{padding:[50,50]}); },
+  zoomroute:b=>{ const r=routeById(+b.dataset.v); closeModal(); fitCoords(legLine(geom(r).out)); },
   departsel:()=>{ const ids=UI.sel.size?[...UI.sel]:trainsIn('station').filter(t=>!canDepart(t)).map(t=>t.id); const r=departMany(ids); UI.sel.clear();
     if(r.ok) toast(r.ok+' train(s) parti(s) !'); if(r.err) toast(r.err,'bad'); renderDrawer(); updateTrains(); saveAll(); },
   departone:b=>{ if(res(depart(trainById(+b.dataset.v)),'Départ !')){ closeModal(); renderDrawer(); updateTrains(); saveAll(); } },
@@ -310,7 +281,7 @@ const ACT={
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.download=name; a.click(); },
   import:()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.json'; i.onchange=()=>{ const fr=new FileReader(); fr.onload=()=>{ try{ if(!adopt(JSON.parse(fr.result))) throw 0; saveAll(); toast('Partie importée.'); closeModal(); fullRedraw(); }catch(e){ toast('Fichier invalide.','bad'); } }; fr.readAsText(i.files[0]); }; i.click(); },
   reset:b=>{ if(!armed(b,'Effacer la partie ? Cliquez encore')) return; openModal('newgame'); },
-  startgame:()=>{ newGame($('#ng-name').value.trim()||'Hakvision Rail',$('#ng-start').value); UI.form.a=G.start; UI.sel.clear(); closeModal(); saveAll(); fullRedraw(); map.setView([STATIONS[G.start].la,STATIONS[G.start].lo],6); openModal('help'); },
+  startgame:()=>{ newGame($('#ng-name').value.trim()||'Hakvision Rail',$('#ng-start').value); UI.form.a=G.start; UI.sel.clear(); closeModal(); saveAll(); fullRedraw(); flyTo(STATIONS[G.start].la,STATIONS[G.start].lo,6.5); openModal('help'); },
   newroute:()=>startEdit(null,UI.form.train,UI.form.a),
   editroute:b=>startEdit(+b.dataset.v),
   saveroute:()=>{ const E=UI.edit, opt={stops:E.stops,direct:E.direct,name:E.name.trim()||undefined,color:E.color};
@@ -323,9 +294,10 @@ const ACT={
   ctrl:b=>{ const t=trainById(+b.dataset.v); t.ctrl=Math.max(0,Math.min(4,ctrlOf(t)+ +b.dataset.d)); renderModal(); saveAll(); },
   unpark:b=>{ if(res(setService(trainById(+b.dataset.v),true),'Train remis en service.')){ renderDrawer(); updateTrains(); saveAll(); } },
   hub:b=>{ const c=b.dataset.v; if(res(buyHub(c),'⭐ Hub établi à '+stationName(c)+' !')){ UI.form.a=c; drawStations(); renderModal(); saveAll(); } },
-  fly:b=>{ const s=STATIONS[b.dataset.v]; closeModal(); map.setView([s.la,s.lo],7); setTimeout(()=>openModal('station',b.dataset.v),350); },
-  region:b=>{ const r=MAP_REGIONS[+b.dataset.v]; closeModal(); map.setView([r[1],r[2]],r[3]); },
-  zin:()=>map.zoomIn(), zout:()=>map.zoomOut(), globe:()=>{ closeModal(); fitAll(); }, rails:()=>{ railsOn=!railsOn; drawRails(); toast(railsOn?'Voies affichées.':'Voies masquées.'); }
+  fly:b=>{ const s=STATIONS[b.dataset.v]; closeModal(); flyTo(s.la,s.lo,7.5); setTimeout(()=>openModal('station',b.dataset.v),1100); },
+  region:b=>{ const r=MAP_REGIONS[+b.dataset.v]; closeModal(); flyTo(r[1],r[2],r[3]+0.3); },
+  zin:()=>mapZoom(1), zout:()=>mapZoom(-1), globe:()=>{ closeModal(); fitAll(); }, rails:()=>{ railsOn=!railsOn; drawRails(); toast(railsOn?'Voies affichées.':'Voies masquées.'); },
+  view3d:b=>{ const on=toggle3D(); b.classList.toggle('on',on); toast(on?'Vue 3D inclinée (glissez avec deux doigts pour tourner).':'Vue 2D.'); }
 };
 document.addEventListener('click',e=>{ if(e.target.closest('[data-stop]')) return; const b=e.target.closest('[data-act]'); if(!b||b.disabled) return; e.preventDefault(); if(ACT[b.dataset.act]) ACT[b.dataset.act](b); if(G) renderTop(); });
 document.addEventListener('change',e=>{ const t=e.target;
@@ -355,7 +327,7 @@ function saveText(){ const t=Math.max(CLOUD.at,SAVE_INFO.at); if(CLOUD.err) retu
 function renderSaved(){ const el=$('#saved'); if(!el) return; const ok=CLOUD.at||SAVE_INFO.at; el.textContent=ok?'💾':'⚠️'; el.title=saveText(); }
 
 /* ---------- démarrage et boucle ---------- */
-function fullRedraw(){ for(const mk of TM.values()) LY.trains.removeLayer(mk); TM.clear(); RC.clear(); drawRoutes(); renderTop(); renderDrawer(); updateTrains(); }
+function fullRedraw(){ RC.clear(); drawRoutes(); renderTop(); renderDrawer(); updateTrains(); }
 function arrivalToasts(arr){ if(arr.length>3){ toast(arr.length+' trains arrivés : +'+fmt$(arr.reduce((s,t)=>s+(t.lastRev||0),0)),'money'); return; }
   for(const t of arr){ const r=routeOfTrain(t); toast('+'+fmt$(t.lastRev||0)+' · '+(r?r.name+' à '+stationName(t.at==='a'?r.a:r.b):t.name),'money'); } }
 function boot(){
