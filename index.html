@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Congo Rail Empire</title>
+<meta name="description" content="Jeu de gestion ferroviaire : bâtissez un empire du rail au Congo et dans le monde.">
+<meta name="theme-color" content="#0b1220">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{--bg:#0b1220;--card:#121c31;--card2:#18243e;--line:#253659;--fg:#e8eefc;--mut:#8da2c8;--gold:#ffd60a;--pos:#5ee38b;--neg:#ff6b6b;--acc:#4cc9f0}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:6px 12px;padding-top:max(6px,env(safe-area-inset-top));background:var(--card);border-bottom:1px solid var(--line)}
+header .logo{color:var(--gold);font-weight:700;white-space:nowrap}
+#clock{font-variant-numeric:tabular-nums;color:var(--mut)}
+#cash{font-variant-numeric:tabular-nums}
+#speeds{display:flex;gap:3px;margin-left:auto}
+button,select,input{font:inherit;color:var(--fg)}
+button{background:#1a2a4a;border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.on{background:var(--gold);color:#111;border-color:var(--gold)}
+button.primary{background:var(--gold);color:#111;border-color:var(--gold);font-weight:600}
+button.danger{border-color:#7a2b33;color:#ffb3b3}
+select,input:not([type]),input[type=text]{background:#0f1830;border:1px solid var(--line);border-radius:8px;padding:6px;width:100%}
+input[type=range]{width:100%;accent-color:var(--gold)}
+main{flex:1;display:grid;grid-template-columns:1fr 390px;min-height:0}
+#map{min-height:200px;background:#0a2238}
+aside{overflow:auto;padding:8px 10px 40px;background:var(--card);border-left:1px solid var(--line)}
+.tabs{display:flex;gap:3px;flex-wrap:wrap;position:sticky;top:-8px;background:var(--card);padding:6px 0;z-index:5}
+.tabs button{flex:1;padding:6px 4px;white-space:nowrap}
+.card{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0}
+.card h4{margin:0 0 6px;font-size:15px}
+.mut{color:var(--mut);font-size:12.5px}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.col{display:flex;flex-direction:column;gap:5px;margin:6px 0}
+.col button{text-align:left}
+label{display:block;margin:6px 0;font-size:13px;color:var(--mut)}
+label select,label input{margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0}
+td,th{padding:3px 4px;border-bottom:1px solid var(--line);text-align:left}
+tr.me td{color:var(--gold);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kpis div{background:#0f1830;border-radius:8px;padding:6px}
+.kpis span{display:block;font-size:11.5px;color:var(--mut)}
+.kpis b{font-size:15px;font-variant-numeric:tabular-nums}
+.chip{border-radius:20px;margin:2px 0}
+.lrow{display:flex;gap:8px;align-items:flex-start;padding:6px;border-radius:8px;cursor:pointer}
+.lrow:hover{background:#1d2b4a}
+.lrow i,.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-top:4px;flex:none}
+.msg{background:#2a2410;border:1px solid #6b5a10;border-radius:8px;padding:6px 8px;margin:6px 0;display:flex;justify-content:space-between;gap:6px}
+.msg .x{padding:0 6px}
+.preview{background:#0f1830;border-radius:8px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.tip{color:var(--gold);font-size:12.5px;margin-top:4px}
+.tips{margin:0;padding-left:18px}.tips li{margin:4px 0}
+.news{list-style:none;margin:0;padding:0}.news li{padding:4px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.news li.bad{color:#ffc2c2}.news li.rival{color:#c9d3ff}.news li.me{color:#fff2b3}
+.bar{height:6px;background:#0f1830;border-radius:4px;overflow:hidden;margin:3px 0}.bar i{display:block;height:100%;background:var(--gold)}
+.barc{width:30%}.barc i{display:block;height:8px;border-radius:3px}.barc i.p{background:var(--pos)}.barc i.n{background:var(--neg)}
+details{margin:6px 0}summary{cursor:pointer}
+.tt td:nth-child(n+2){font-variant-numeric:tabular-nums;white-space:nowrap}
+a{color:var(--acc)}
+.trn{width:22px;height:22px;border-radius:50%;background:#0b1220;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 0 6px #000}
+.leaflet-tooltip.lbl{background:transparent;border:0;box-shadow:none;color:#cfd8e8;font-size:11px;padding:0;text-shadow:0 0 3px #000,0 0 3px #000}
+.leaflet-tooltip.lbl.cg{color:#fff;font-weight:600}
+.leaflet-tooltip.lbl:before{display:none}
+.leaflet-container{background:#0a2238;font:inherit}
+#modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px}
+#modal[hidden]{display:none}
+#modal .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:440px;width:100%}
+#modal h2{margin:0 0 8px;color:var(--gold)}
+@media(max-width:800px){
+  main{grid-template-columns:1fr;grid-template-rows:46% 54%}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .tabs button span{display:none}
+  #speeds{margin-left:0;width:100%;justify-content:space-between}
+  #speeds button{flex:1;padding:5px 2px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+}
+</style></head><body>
+<header><span class="logo">🚆 Congo Rail Empire</span><span id="clock"></span><span id="cash"></span><span id="speeds"></span></header>
+<main><div id="map"></div><aside id="panel"></aside></main>
+<div id="modal" hidden></div>
+<script src="vendor/leaflet.js"></script>
+<script src="world.js?v=1.0.0"></script>
+<script src="data.js?v=1.0.0"></script>
+<script src="network.js?v=1.0.0"></script>
+<script src="sim.js?v=1.0.0"></script>
+<script src="ui.js?v=1.0.0"></script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
+</body></html>
