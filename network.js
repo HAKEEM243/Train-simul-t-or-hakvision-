@@ -56,11 +56,12 @@ function profile(km,vkmh,acc){
 /* ---------- itinéraire d'une ligne : arrêts, marches, temps d'arrêt ---------- */
 // stopMode : 'omni' (toutes les gares), 'express' (villes ≥ 300 000 hab., nœuds et terminus), 'direct' (terminus seulement)
 function dwellAt(code,m){ const p=STATIONS[code].p; if(m.kind==='frt') return 20*MIN; return p>=5?10*MIN:p>=1?6*MIN:3*MIN; }
-function buildLeg(nodes,edges,m,stopMode){
+function buildLeg(nodes,edges,m,stopMode,stopSet){
   const n=nodes.length, cum=[0]; for(let i=0;i<edges.length;i++) cum.push(cum[i]+edges[i].km);
   const isStop=nodes.map((c,i)=>{ if(i===0||i===n-1) return true;
     if(edges[i-1].ferry||edges[i].ferry) return true;                               // embarquement sur le bac
     if(m.kind==='frt'||stopMode==='direct') return false;
+    if(stopSet) return stopSet.has(c);                                                  // arrêts choisis par le joueur
     if(stopMode==='omni') return true;
     return STATIONS[c].p>=0.3||NET.adj[c].length>2; });
   const segs=[], stopTimes=[]; let t=0, i0=0;
@@ -75,9 +76,9 @@ function buildLeg(nodes,edges,m,stopMode){
   const stops=[]; for(const s of stopTimes){ const last=stops[stops.length-1]; if(last&&last.idx===s.i){ if(s.arr!=null) last.arr=s.arr; if(s.dep!=null) last.dep=s.dep; } else stops.push({idx:s.i,code:nodes[s.i],km:cum[s.i],arr:s.arr!=null?s.arr:0,dep:s.dep!=null?s.dep:s.arr}); }
   return {nodes,edges,cum,segs,stops,T:t,km:cum[n-1]};
 }
-function buildRoute(a,b,m,stopMode){
+function buildRoute(a,b,m,stopMode,stopSet){
   const p=shortestPath(a,b,m); if(!p) return null;
-  const out=buildLeg(p.nodes,p.edges,m,stopMode), ret=buildLeg(p.nodes.slice().reverse(),p.edges.slice().reverse(),m,stopMode);
+  const out=buildLeg(p.nodes,p.edges,m,stopMode,stopSet), ret=buildLeg(p.nodes.slice().reverse(),p.edges.slice().reverse(),m,stopMode,stopSet);
   return {out,ret,km:out.km};
 }
 /* position sur une étape à l'instant dt (ms depuis le départ) → {ll:[lat,lon], kmh, at?} */

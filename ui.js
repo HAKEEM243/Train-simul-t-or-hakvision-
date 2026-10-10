@@ -2,7 +2,7 @@
    Hakvision Rail — interface : carte claire, barre du haut, menu hexagonal, tiroir des trains, fenêtres.
    ========================================================= */
 'use strict';
-const APP_V='2.1.0';
+const APP_V='2.2.0';
 const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const UI={drawer:false,dtab:'station',sel:new Set(),modal:null,mtab:{yard:'fleet'},fleetFilter:'all',model:null,form:{train:null,a:'KIN',b:null,stop:'omni',name:''}};
 let map,LY={},TM=new Map();
@@ -121,7 +121,7 @@ function renderDrawer(){ const d=$('#drawer'); if(!UI.drawer){ d.hidden=true; $(
   let rows=list.map(t=>{ const r=routeOfTrain(t), m=MODELS[t.model], name=r?r.name:t.name, bar=`<i class="cb" style="background:${r?r.color:'#9aa3c7'}"></i>`;
     if(tab==='enroute'){ const f=Math.min(1,(now()-t.dep)/t.dur); return `<div class="row" data-act="train" data-v="${t.id}">${bar}<b>${esc(name)}</b><span class="prog"><i style="width:${f*100}%"></i></span><span class="when">${fmtIn(t.dep+t.dur-now())}</span></div>`; }
     if(tab==='station'){ const e=canDepart(t); return `<div class="row" data-act="train" data-v="${t.id}">${bar}<b>${esc(name)}</b><span class="wear ${t.wear>80?'bad':''}">${m.kind==='frt'?CARGO:BUS} ${t.wear.toFixed(2)}%</span><span class="when">${fmtAgo(t.since)}</span><i class="dot ${e?'red':'green'}" title="${esc(e||'Prêt à partir')}"></i><label class="ck" data-stop="1"><input type="checkbox" data-sel="${t.id}" ${UI.sel.has(t.id)?'checked':''} aria-label="Sélectionner"></label></div>`; }
-    if(tab==='yard') return `<div class="row" data-act="train" data-v="${t.id}">${bar}<b>${esc(t.name)}</b><span class="wear">${t.wear.toFixed(1)}%</span><button class="mini" data-act="assign" data-v="${t.id}">Affecter</button></div>`;
+    if(tab==='yard') return `<div class="row" data-act="train" data-v="${t.id}">${bar}<b>${esc(r?r.name:t.name)}</b><span class="wear">${t.wear.toFixed(1)}%</span>${r?`<button class="mini" data-act="unpark" data-v="${t.id}">En service</button>`:`<button class="mini" data-act="assign" data-v="${t.id}">Affecter</button>`}</div>`;
     return `<div class="row">${bar}<b>${esc(t.name)}</b><span></span><span class="when">${fmtIn(t.until-now())}</span></div>`; }).join('');
   if(!list.length) rows=`<div class="empty">${{enroute:'Aucun train en route.',station:'Aucun train en gare. Créez un itinéraire au DÉPÔT.',yard:'Aucun train au dépôt.',pending:'Aucune commande en cours.'}[tab]}</div>`;
   const ready=list.filter(t=>!canDepart(t)), n=UI.sel.size||ready.length;
@@ -133,12 +133,12 @@ function renderDrawer(){ const d=$('#drawer'); if(!UI.drawer){ d.hidden=true; $(
    <nav class="dtabs">${DTABS.map(([k,i,l])=>`<button class="${k===tab?'on':''}" data-act="dtab" data-v="${k}"><i class="cnt">${trainsIn(k).length}</i>${ico(i,22)}<span>${l}</span></button>`).join('')}</nav>`; }
 
 /* ---------- fenêtres ---------- */
-function openModal(name,arg){ UI.modal={name,arg}; if(name==='mail') setTimeout(()=>{ G.mail.forEach(m=>m.read=true); renderTop(); },800); renderModal(); }
+function openModal(name,arg){ if(name==='route'){ startEdit(arg); return; } UI.modal={name,arg}; if(name==='mail') setTimeout(()=>{ G.mail.forEach(m=>m.read=true); renderTop(); },800); renderModal(); }
 function closeModal(){ UI.modal=null; $('#modal').hidden=true; $('#modal').innerHTML=''; }
 function sheet(title,body,tabs,noClose){ return `<div class="sheet">${noClose?'':`<button class="mx" data-act="close" aria-label="Fermer">${ico('close',26)}</button>`}<h2>${title}</h2>${tabs||''}<div class="sbody">${body}</div></div>`; }
 function tabsHtml(key,list){ return `<nav class="stabs">${list.map(([k,l])=>`<button class="${UI.mtab[key]===k?'on':''}" data-act="mtab" data-k="${key}" data-v="${k}">${l}</button>`).join('')}</nav>`; }
 function renderModal(){ const M=UI.modal, el=$('#modal'); if(!M){ el.hidden=true; return; } el.hidden=false;
-  const f={world:mWorld,yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
+  const f={redit:mRouteEdit,world:mWorld,yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
   const sc=el.querySelector('.sbody'), top=sc?sc.scrollTop:0; el.innerHTML=f(M.arg); const sb=el.querySelector('.sbody'); if(sb&&M.keep) sb.scrollTop=top; M.keep=true; }
 const sOpts=(sel,filter)=>{ const order=['CD','CG',...Object.keys(COUNTRIES).filter(c=>c!=='CD'&&c!=='CG').sort((a,b)=>COUNTRIES[a][0].localeCompare(COUNTRIES[b][0]))];
   return order.map(c=>{ const l=Object.values(STATIONS).filter(s=>s.c===c&&(!filter||filter(s.code))).sort((x,y)=>x.n.localeCompare(y.n)); return l.length?`<optgroup label="${esc(COUNTRIES[c][0])}">${l.map(s=>`<option value="${s.code}" ${s.code===sel?'selected':''}>${esc(s.n)}</option>`).join('')}</optgroup>`:''; }).join(''); };
@@ -166,20 +166,40 @@ function mYard(){ const tab=UI.mtab.yard||'fleet', T=tabsHtml('yard',[['fleet','
   return sheet('COUR DE TRIAGE',`<div class="mut pad">Dépôt : ${usedSlots()} / ${G.slots} emplacements · niveau ${G.level}. Les trains commandés arrivent dans « EN ATTENTE ».</div><div class="grid">${Object.entries(MODELS).map(([k,m])=>{ const lock=m.lvl>G.level;
      return `<div class="mcard ${lock?'lock':''}"><h5>${esc(m.name.toUpperCase())}</h5><div class="cap">${capTxt(m)} · ${m.vmax} km/h</div><div class="pic">${trainArt(k)}<span class="tags">${m.el?'<i class="tg y">⚡</i>':'<i class="tg b">⛽</i>'}</span></div>
       <div class="spec">${specLine(m)}</div>${lock?`<div class="own">🔒 NIVEAU ${m.lvl}</div>`:`<button class="buy" data-act="buy" data-v="${k}">${m.pts?m.pts+' POINTS':fmt$(m.price)}</button>`}</div>`; }).join('')}</div>`,T); }
-function routeForm(){ const f=UI.form, free=G.trains.filter(t=>t.state==='yard'||t.state==='station');
+/* --- création d'un itinéraire : choix du train puis éditeur d'arrêts --- */
+function routeForm(){ const free=G.trains.filter(t=>t.state==='yard'||t.state==='station');
   if(!free.length) return `<div class="empty">Tous vos trains sont en route ou en livraison. Commandez un train ou attendez son arrivée.</div>`;
-  if(!free.some(t=>t.id===f.train)) f.train=free[0].id; const tr=trainById(f.train), m=MODELS[tr.model];
-  if(!G.hubs.includes(f.a)) f.a=G.hubs[0]; net(); const reach=reachable(f.a,m); if(!reach.has(f.b)) f.b=[...reach].sort((x,y)=>STATIONS[y].p-STATIONS[x].p)[0]||null;
-  let prev=''; if(f.b){ const tmp={id:-1,a:f.a,b:f.b,model:tr.model,stopMode:f.stop}; G.routes.push(tmp); const p=tripPlan({route:-1,model:tr.model,at:'a',id:tr.id}); G.routes.pop();
-    if(p){ const g=geom(tmp), cost=p.fuel*fuelPrice()+p.energy*energyPrice();
-     prev=`<div class="prev"><div><b>${Math.round(g.km)} km</b> · ${g.out.stops.length} arrêts · trajet <b>${fmtIn(g.out.T/G.scale)}</b> (${fmtDurGame(g.out.T)} en jeu)</div><div class="mut">${g.out.stops.map(s=>esc(stationName(s.code))).join(' → ')}</div>
-       <div>Par trajet ≈ ${m.pax?'<b>'+p.pax+'</b> voyageurs':''}${m.pax&&m.t?' + ':''}${m.t?'<b>'+p.tons+'</b> t':''} · recette <b>${fmt$(p.rev)}</b> · ${m.el?Math.round(p.energy).toLocaleString('fr')+' kWh':Math.round(p.fuel).toLocaleString('fr')+' L'} (≈ ${fmt$(cost)})</div></div>`; } }
-  return `<div class="form"><h4 class="sec">CRÉER UN ITINÉRAIRE</h4>
-   <label>Train<select data-f="train">${free.map(t=>`<option value="${t.id}" ${t.id===f.train?'selected':''}>${esc(t.name)} · ${stateFr(t)}${t.route?' (remplace '+esc(routeOfTrain(t).name)+')':''}</option>`).join('')}</select></label>
-   <div class="two"><label>Départ (vos hubs)<select data-f="a">${G.hubs.map(c=>`<option value="${c}" ${c===f.a?'selected':''}>⭐ ${esc(stationName(c))} (${esc(COUNTRIES[STATIONS[c].c][0])})</option>`).join('')}</select></label><label>Arrivée (${reach.size} gares)<select data-f="b">${reach.size?sOpts(f.b,c=>reach.has(c)):'<option>—</option>'}</select></label></div>
-   <div class="two">${m.pax?`<label>Arrêts<select data-f="stop">${[['omni','Toutes les gares'],['express','Grandes villes'],['direct','Direct']].map(([k,l])=>`<option value="${k}" ${k===f.stop?'selected':''}>${l}</option>`).join('')}</select></label>`:''}<label>Nom<input data-f="name" value="${esc(f.name)}" placeholder="${routeLetter(G.routes.length)}-Line" maxlength="24"></label></div>
-   ${reach.size?prev:'<div class="err">Ce train ne peut pas rouler depuis ce hub : il demande la '+esc(GAUGES[m.g].toLowerCase())+(m.el?' électrifiée':'')+'. Ici : '+esc([...gaugesAt(f.a)].map(g=>GAUGES[g]).join(', ')||'aucune voie')+'. Commandez un train adapté (COMMANDER).</div>'}
-   <button class="go wide" data-act="mkroute" ${f.b?'':'disabled'}>CRÉER L'ITINÉRAIRE</button></div>`; }
+  return `<button class="go wide" data-act="newroute">⊕ CRÉER UN ITINÉRAIRE</button><div class="mut">Choisissez un train, votre hub de départ, la gare d'arrivée, puis cochez les gares où le train s'arrête.</div>`; }
+function startEdit(routeId,trainId,a){ if(routeId){ const r=routeById(routeId), g=geom(r); UI.edit={id:r.id,train:r.train,a:r.a,b:r.b,stops:g?g.out.stops.map(s=>s.code):[r.a,r.b],direct:!!r.direct,name:r.name,color:r.color}; }
+  else { const free=G.trains.filter(t=>t.state==='yard'||t.state==='station'), tr=trainById(trainId)||free.find(t=>reachable(a||G.hubs[0],MODELS[t.model]).size)||free[0];
+    UI.edit={id:null,train:tr?tr.id:null,a:a||(tr&&tr.route?routeOfTrain(tr).a:null)||UI.form.a||G.hubs[0],b:null,stops:null,direct:false,name:'',color:ROUTE_PALETTE[G.routes.length%ROUTE_PALETTE.length]}; }
+  if(!G.hubs.includes(UI.edit.a)) UI.edit.a=G.hubs[0]; openModal('redit'); }
+function editModel(){ const E=UI.edit; return E.id?routeById(E.id).model:(trainById(E.train)||{}).model; }
+function mRouteEdit(){ const E=UI.edit; if(!E) return sheet('ITINÉRAIRE','<div class="empty">—</div>');
+  const free=G.trains.filter(t=>t.state==='yard'||t.state==='station'||(E.id&&t.id===E.train)), model=editModel(); if(!model) return sheet('ITINÉRAIRE','<div class="empty">Aucun train disponible.</div>');
+  const m=MODELS[model]; net(); const reach=reachable(E.a,m); if(!reach.has(E.b)){ E.b=[...reach].sort((x,y)=>STATIONS[y].p-STATIONS[x].p)[0]||null; E.stops=null; }
+  const head=`<div class="two">${E.id?'':`<label>Train<select data-e="train">${free.map(t=>`<option value="${t.id}" ${t.id===E.train?'selected':''}>${esc(t.name)}${t.route?' · '+esc(routeOfTrain(t).name):''}</option>`).join('')}</select></label>`}
+    <label>Départ (vos hubs)<select data-e="a">${G.hubs.map(c=>`<option value="${c}" ${c===E.a?'selected':''}>⭐ ${esc(stationName(c))}</option>`).join('')}</select></label>
+    <label>Terminus (${reach.size} gares)<select data-e="b">${reach.size?sOpts(E.b,c=>reach.has(c)):'<option>—</option>'}</select></label></div>`;
+  if(!E.b) return sheet(m.kind==='frt'?'ITINÉRAIRE FRET':'ITINÉRAIRE VOYAGEURS',head+`<div class="err">Ce train ne peut pas rouler depuis ce hub : il demande la ${esc(GAUGES[m.g].toLowerCase())}${m.el?' électrifiée':''}. Ici : ${esc([...gaugesAt(E.a)].map(g=>GAUGES[g]).join(', ')||'aucune voie')}.</div>`);
+  const path=pathOf(E.a,E.b,model).nodes; if(!E.stops) E.stops=path.slice(); E.stops=E.stops.filter(c=>path.includes(c)); for(const c of [E.a,E.b]) if(!E.stops.includes(c)) E.stops.push(c);
+  const tmp={id:-1,a:E.a,b:E.b,model,stops:E.stops,direct:E.direct||m.kind==='frt'}, g=geom(tmp), tr=trainById(E.train)||{model,ctrl:1,speed:1,at:'a'}, p=tripPlan(tr,'out',tmp,true);
+  const sel=new Set(g.out.stops.map(s=>s.code)), byCode=Object.fromEntries(p.stops.map(s=>[s.code,s])), demand=p.stops.reduce((s,x)=>s+x.wait,0);
+  const rows=path.map((c,i)=>{ const on=sel.has(c), end=i===0||i===path.length-1, x=byCode[c], w=Math.round(poolNow(c)), mx=poolMax(c);
+    return `<label class="stoprow ${on?'on':''}"><input type="checkbox" data-stop2="${c}" ${on?'checked':''} ${end||tmp.direct?'disabled':''}><span class="sn">${esc(stationName(c))}${G.hubs.includes(c)?' ⭐':''}<small>${Math.round(g.out.cum[i])} km</small></span>
+      <span class="sw"><b>${w.toLocaleString('fr')}/${mx.toLocaleString('fr')}</b><i class="prog"><i style="width:${w/mx*100}%"></i></i></span><span class="sio">${x&&m.pax?`<b class="pos">+${x.on}</b> <b class="neg">−${x.off}</b>`:end?'terminus':''}</span></label>`; }).join('');
+  const body=`${head}<div class="rbar"><b>${esc(stationName(E.a).toUpperCase())}</b><span><i>${Math.round(g.km)} KM</i><i>${g.out.stops.length} ARRÊTS</i></span><b>${esc(stationName(E.b).toUpperCase())}</b></div>
+   ${m.kind==='pax'?`<label class="switch"><span>TRAJET DIRECT</span><input type="checkbox" data-e="direct" ${E.direct?'checked':''}><i></i></label>`:''}
+   <div class="kpi"><div><span>Tronçons</span><b>${g.out.edges.length}</b></div><div><span>Demande</span><b>${demand.toLocaleString('fr')}</b></div><div><span>Durée du trajet</span><b>${fmtIn(p.T/G.scale)}</b></div><div><span>Subvention</span><b>${p.sub} %</b></div></div>
+   <div class="prev">Par trajet ≈ ${m.pax?`<b>${p.pax}</b> voyageurs`:''}${m.pax&&m.t?' + ':''}${m.t?`<b>${p.tons}</b> t`:''} · recette <b>${fmt$(p.rev)}</b> · ${m.el?Math.round(p.energy).toLocaleString('fr')+' kWh':Math.round(p.fuel).toLocaleString('fr')+' L'}${m.pax?` · fraude ≈ ${p.fraud} voyageurs`:''}</div>
+   ${m.pax&&!tmp.direct?`<div class="info">ⓘ Cochez ou décochez une gare pour l'ajouter ou la retirer des arrêts. Les nombres montrent les voyageurs en attente et les montées / descentes prévues.</div>
+   <div class="chips"><button data-act="stopsall">TOUTES</button><button data-act="stopsbig">GRANDES VILLES</button><button data-act="stopsnone">AUCUNE</button></div>`:''}
+   <div class="stops">${rows}</div>
+   <label>Nom de la ligne<input data-e="name" value="${esc(E.name)}" placeholder="${routeLetter(G.routes.length)}-Line" maxlength="24"></label>
+   <div class="palette">${ROUTE_PALETTE.map(c=>`<button class="${c===E.color?'on':''}" style="background:${c}" data-act="color" data-v="${c}" aria-label="Couleur"></button>`).join('')}</div>
+   <div class="btns">${E.id?`<button class="go" data-act="saveroute">METTRE À JOUR</button><button class="danger" data-act="delroute" data-v="${E.id}">Supprimer la ligne</button>`:`<button class="go" data-act="saveroute">CRÉER LA LIGNE</button>`}</div>`;
+  return sheet(m.kind==='frt'?'ITINÉRAIRE FRET':'ITINÉRAIRE VOYAGEURS',body); }
+
 function mCheck(){ return sheet('OBJECTIFS',MISSIONS.map(m=>{ const [a,b]=m.p(), done=a>=b, got=G.claimed[m.id];
   return `<div class="mis ${got?'got':''}"><div><b>${esc(m.name)}</b><div class="prog"><i style="width:${Math.min(1,a/b)*100}%"></i></div><small>${Math.min(a,b).toLocaleString('fr')} / ${b.toLocaleString('fr')}</small></div>
    ${got?'<span class="ok">✓</span>':`<button class="${done?'go':''}" data-act="claim" data-v="${m.id}" ${done?'':'disabled'}>+${m.pts} pts</button>`}</div>`; }).join('')); }
@@ -200,10 +220,10 @@ function mFuel(){ const card=(k,name,unit,price,cap,cur,color,icon,fn)=>`<div cl
    <div class="btns">${[5000,20000].map(q=>`<button data-act="fuel" data-k="${k}" data-v="${q}">+${q.toLocaleString('fr')} ${unit} · ${fmt$(q*price)}</button>`).join('')}<button class="go" data-act="fuel" data-k="${k}" data-v="${cap}">PLEIN · ${fmt$((cap-cur)*price)}</button></div></div>`;
   return sheet('CARBURANT',`<div class="mut pad">Les prix changent toutes les 10 minutes : achetez quand c'est bas ! Les trains diesel consomment du gazole, les électriques de l'énergie.</div>`+
    card('fuel','GAZOLE','L',fuelPrice(),G.fuelCap,G.fuel,'#1e88ff','fuel',fuelPrice)+card('energy','ÉNERGIE','kWh',energyPrice(),G.energyCap,G.energy,'#d69e00','bolt',energyPrice)); }
-function mFinance(){ const Lg=G.ledger.slice(-12).reverse(), mx=Math.max(1,...Lg.map(b=>Math.max(b.rev,b.fuel+b.repair+b.buy)));
+function mFinance(){ const Lg=G.ledger.slice(-12).reverse(), mx=Math.max(1,...Lg.map(b=>Math.max(b.rev,b.fuel+b.repair+b.buy+(b.staff||0))));
   return sheet('FINANCES',`<div class="kpi"><div><span>Compte</span><b>${fmt$(G.cash)}</b></div><div><span>Dette</span><b>${fmt$(G.debt)}</b></div><div><span>Recettes totales</span><b>${fmt$(G.stats.rev)}</b></div><div><span>Intérêts</span><b>0,2 % / heure</b></div></div>
    <div class="btns"><button data-act="borrow" data-v="250000">Emprunter 250 000 $</button><button data-act="borrow" data-v="1000000">Emprunter 1 000 000 $</button><button data-act="repay" data-v="250000">Rembourser 250 000 $</button></div>
-   <h4 class="sec">PAR HEURE</h4>${Lg.length?`<table><tr><th>Heure</th><th>Recettes</th><th>Dépenses</th><th></th></tr>${Lg.map(b=>{ const dep=b.fuel+b.repair+b.buy;
+   <h4 class="sec">PAR HEURE</h4>${Lg.length?`<table><tr><th>Heure</th><th>Recettes</th><th>Dépenses</th><th></th></tr>${Lg.map(b=>{ const dep=b.fuel+b.repair+b.buy+(b.staff||0);
     return `<tr><td>${new Date(b.h*36e5).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})}</td><td class="pos">${fmt$(b.rev)}</td><td class="neg">${fmt$(dep)}</td><td class="bars"><i class="p" style="width:${b.rev/mx*100}%"></i><i class="n" style="width:${dep/mx*100}%"></i></td></tr>`; }).join('')}</table>`:'<div class="empty">Pas encore de mouvements.</div>'}`); }
 function mService(){ const list=G.trains.slice().sort((a,b)=>b.wear-a.wear), tot=list.filter(t=>t.state!=='enroute').reduce((s,t)=>s+repairCost(t),0);
   return sheet('ENTRETIEN',`<div class="mut pad">L'usure augmente à chaque trajet (plus vite sur les voies abîmées). Au-delà de 80 %, risque de panne ; à 100 %, le train est immobilisé.</div><button class="go wide" data-act="repairall" ${tot?'':'disabled'}>TOUT RÉPARER · ${fmt$(tot)}</button>`+
@@ -218,22 +238,35 @@ function mHelp(){ return sheet('COMMENT JOUER',`<ol class="help"><li>Ouvrez le <
    <li>Surveillez le <b>gazole</b> (jauge bleue) et l'<b>énergie</b> (jauge jaune) : rechargez dans CARBURANT quand le prix est bas.</li><li>Réparez l'usure dans <b>ENTRETIEN</b>. Validez vos <b>OBJECTIFS</b> pour gagner des points.</li>
    <li>Au Congo, les voies sont en <b>voie du Cap</b> (1067 mm) ; Kisangani–Ubundu est en voie métrique. L'Europe et la Chine sont en voie normale.</li><li>Le cuivre de <b>Kolwezi</b> vers <b>Lobito</b> ou <b>Dar es Salaam</b> rapporte gros avec un train de fret.</li>
    <li>Les trajets continuent quand le jeu est fermé ; avec le <b>pilote automatique</b>, vos trains repartent seuls.</li></ol><button class="go wide" data-act="close">C'EST PARTI !</button>`); }
-function mTrain(id){ const t=trainById(id); if(!t) return sheet('TRAIN','<div class="empty">Train introuvable.</div>'); const m=MODELS[t.model], r=routeOfTrain(t), p=r&&t.state==='station'?tripPlan(t):null, e=t.state==='station'?canDepart(t):null;
-  return sheet(esc(t.name.toUpperCase()),`<div class="mcard big"><div class="pic">${trainArt(t.model)}</div><div class="spec">${specLine(m)}</div></div>
-   <div class="kpi"><div><span>État</span><b>${stateFr(t)}</b></div><div><span>Usure</span><b class="${t.wear>80?'neg':''}">${t.wear.toFixed(1)} %</b></div><div><span>Ligne</span><b>${r?esc(r.name):'—'}</b></div><div><span>Capacité</span><b>${capTxt(m)}</b></div></div>
-   ${t.state==='enroute'&&t.trip?`<div class="prev">En route vers <b>${esc(stationName(t.dir==='out'?r.b:r.a))}</b> · arrivée dans ${fmtIn(t.dep+t.dur-now())}<br>À bord : ${t.trip.pax?t.trip.pax+' voyageurs ':''}${t.trip.tons?t.trip.tons+' t':''} · recette attendue ${fmt$(t.trip.rev)}</div>`:''}
-   ${p?`<div class="prev">Prochain trajet : ${esc(stationName(p.leg.nodes[0]))} → ${esc(stationName(p.leg.nodes.at(-1)))} · ${Math.round(p.km)} km · ≈ ${fmt$(p.rev)}</div>`:''}
+function mTrain(id){ const t=trainById(id); if(!t) return sheet('TRAIN','<div class="empty">Train introuvable.</div>'); const m=MODELS[t.model], r=routeOfTrain(t), g=r&&geom(r), e=t.state==='station'?canDepart(t):null;
+  const p=r&&t.state!=='enroute'&&t.state!=='pending'?tripPlan(t):null, spd=speedOf(t), ctrl=ctrlOf(t), card=(ic,l,v,cls)=>`<div class="dc"><span class="di">${ic}</span><div><small>${l}</small><b class="${cls||''}">${v}</b></div></div>`;
+  let live='';
+  if(t.state==='enroute'&&t.trip&&t.trip.stops){ const x=tripProgress(t), dur=t.dur, lt=x.legT;
+    live=`<h4 class="sec">EN DIRECT</h4><div class="prev"><b>${x.onboard}</b> voyageurs à bord${t.trip.tons?' · '+t.trip.tons+' t':''} · ${x.atStop?'à quai à <b>'+esc(stationName(x.stops[x.last].c))+'</b>':'prochain arrêt <b>'+esc(stationName(x.stops[x.next].c))+'</b>'} · terminus dans ${fmtIn(t.dep+t.dur-now())}</div>
+     <div class="tlw"><table class="tl"><tr><th>Gare</th><th>Heure</th><th>Montent</th><th>Desc.</th><th>À bord</th></tr>${x.stops.map((s,i)=>`<tr class="${i<x.last||(i===x.last&&!x.atStop)?'past':i===x.next?'next':''}"><td>${esc(stationName(s.c))}</td><td>${new Date(t.dep+(s.arr||0)/lt*dur).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})}</td><td class="pos">+${s.on}</td><td class="neg">−${s.off}</td><td>${s.ob}</td></tr>`).join('')}</table></div>
+     ${t.trip.ctrl?`<div class="mut">👮 ${t.trip.ctrl} contrôleur(s) à bord · ${t.trip.fraud} fraudeurs estimés, ${t.trip.caught} verbalisés (+${fmt$(t.trip.fines)})</div>`:`<div class="mut">Aucun contrôleur à bord : ${t.trip.fraud} voyageurs sans billet.</div>`}`; }
+  const last=t.last?`<h4 class="sec">DERNIER TRAJET</h4><div class="prev">${t.last.pax?t.last.pax+' voyageurs':''}${t.last.tons?' · '+t.last.tons+' t':''} · recette ${fmt$(t.last.rev)}${t.last.fraud!=null&&t.last.pax?`<br>Fraude : ${t.last.fraud} sans billet (−${fmt$(t.last.lost)}) · ${t.last.caught} verbalisés (+${fmt$(t.last.fines)})`:''}${t.last.sub?' · subvention '+t.last.sub+' %':''}</div>`:'';
+  return sheet('DÉTAILS',`<div class="mcard big"><h5>${esc(t.name.toUpperCase())}</h5><div class="pic">${trainArt(t.model)}</div></div>
+   <div class="dgrid">${card('⛽','Consommation',m.el?(m.epk*(0.55+0.45*spd*spd)).toFixed(1)+' kWh/km':(m.fpk*(0.55+0.45*spd*spd)).toFixed(2)+' L/km')}${card('⏱','Vitesse',Math.round(m.vmax*spd)+' km/h')}
+    ${card('⚙','Usure',t.wear.toFixed(2)+' %',t.wear>80?'neg':t.wear>30?'warn':'')}${card('🛤','Écartement',esc(GAUGES[m.g].split(' (')[0]))}${card('👥','Voyageurs',m.pax+' PAX')}${card('📦','Fret',m.t+' T')}</div>
+   <div class="btns">${t.state==='station'?`<button class="go" data-act="departone" data-v="${t.id}" ${e?'disabled':''}>${ico('send',18)} FAIRE PARTIR</button>`:''}<button class="yel" data-act="repair" data-v="${t.id}" ${t.wear<1||t.state==='enroute'?'disabled':''}>🔧 RÉPARER ${fmt$(repairCost(t))}</button>
+    <button data-act="auto" data-v="${t.id}">${t.auto?'Pilote auto : ACTIVÉ':'Pilote auto (30 pts)'}</button></div>
    ${e?`<div class="err">${esc(e)}</div>`:''}
-   <div class="btns">${t.state==='station'?`<button class="go" data-act="departone" data-v="${t.id}" ${e?'disabled':''}>${ico('send',18)} FAIRE PARTIR</button>`:''}
-    ${t.state!=='enroute'&&t.state!=='pending'?`<button data-act="assign" data-v="${t.id}">Itinéraire</button>`:''}<button data-act="repair" data-v="${t.id}" ${t.wear<1||t.state==='enroute'?'disabled':''}>Réparer ${fmt$(repairCost(t))}</button>
-    <button data-act="auto" data-v="${t.id}">${t.auto?'Pilote auto : ACTIVÉ':'Pilote auto (30 pts)'}</button>${t.state!=='enroute'&&t.state!=='pending'?`<button class="danger" data-act="sell" data-v="${t.id}">Vendre ${fmt$(Math.round((m.price||0)*0.5*(1-t.wear/200)))}</button>`:''}</div>`); }
-function mRoute(id){ const r=routeById(id); if(!r) return sheet('ITINÉRAIRE','<div class="empty">Itinéraire supprimé.</div>'); const g=geom(r), t=trainById(r.train);
-  return sheet(esc(r.name.toUpperCase()),`<div class="prev"><b>${esc(stationName(r.a))} ⇄ ${esc(stationName(r.b))}</b> · ${Math.round(g.km)} km · ${fmtIn(g.out.T/G.scale)} par trajet</div>
-   <table><tr><th>Gare</th><th>km</th><th>Temps (jeu)</th></tr>${g.out.stops.map(s=>`<tr><td>${esc(stationName(s.code))}</td><td>${Math.round(s.km)}</td><td>+${fmtDurGame(s.arr||0)}</td></tr>`).join('')}</table>
-   <div class="btns">${t?`<button data-act="train" data-v="${t.id}">Voir le train</button>`:''}<button data-act="zoomroute" data-v="${r.id}">Voir sur la carte</button><button class="danger" data-act="delroute" data-v="${r.id}">Supprimer la ligne</button></div>`); }
+   ${t.state!=='pending'&&t.route?`<label class="switch"><span>EN SERVICE</span><input type="checkbox" data-svc="${t.id}" ${t.state!=='yard'?'checked':''} ${t.state==='enroute'?'disabled':''}><i></i></label>`:''}
+   ${live}
+   ${m.pax?`<h4 class="sec">CONTRÔLEURS</h4><div class="stepper"><button data-act="ctrl" data-v="${t.id}" data-d="-1" ${ctrl<=0?'disabled':''}>−</button><b>${ctrl} 👮</b><button data-act="ctrl" data-v="${t.id}" data-d="1" ${ctrl>=4?'disabled':''}>+</button>
+     <span class="mut">${p?`Fraude estimée ${p.pax?Math.round(p.fraud/p.pax*100):0} % · ${p.caught} verbalisés (+${fmt$(p.fines)}) · salaire ${fmt$(p.ctrlCost)} par trajet`:'Les contrôleurs verbalisent les voyageurs sans billet (amende '+fmt$(fineOf(r?r.a:G.start))+').'}</span></div>`:''}
+   <h4 class="sec">VITESSE</h4><label class="slider"><span>Ajuster la vitesse : <b>${Math.round(spd*100)} %</b> · moins vite = moins de carburant et d'usure</span><input type="range" min="0.6" max="1" step="0.05" value="${spd}" data-spd="${t.id}"></label>
+   ${r?`<h4 class="sec band">DONNÉES D'ITINÉRAIRE</h4><div class="dlistx"><div>📍 ${esc(stationName(r.a))} → ${esc(stationName(r.b))}</div><div>${m.kind==='frt'?'📦 OPÉRATION FRET':'👥 OPÉRATION VOYAGEURS'}</div>
+     <div class="two"><div>↔ ${g?Math.round(g.km):0} km</div><div>⦿ ${g?g.out.stops.length:0} arrêts</div></div>
+     <button class="edit" data-act="editroute" data-v="${r.id}">MODIFIER LES ARRÊTS ✎</button><div class="stoptext">${g?g.out.stops.map(s=>esc(stationName(s.code).toUpperCase())).join(' → '):''}</div>
+     <button class="edit" data-act="editroute" data-v="${r.id}"><span style="color:${r.color}">●</span> ${esc(r.name)} ✎</button></div>`:`<button class="go wide" data-act="assign" data-v="${t.id}">AFFECTER UN ITINÉRAIRE</button>`}
+   ${last}
+   ${t.state!=='enroute'&&t.state!=='pending'?`<button class="danger wide" data-act="sell" data-v="${t.id}">VENDRE ${fmt$(Math.round((m.price||0)*0.5*(1-t.wear/200)))}</button>`:''}`); }
+function mRoute(id){ startEdit(id); return mRouteEdit(); }
 function mStation(c){ const s=STATIONS[c], rs=G.routes.filter(r=>geom(r)&&geom(r).out.stops.some(x=>x.code===c));
   return sheet(esc(s.n.toUpperCase()),`<div class="kpi"><div><span>Pays</span><b>${esc(COUNTRIES[s.c][0])}</b></div><div><span>Habitants</span><b>${s.p>=1?s.p+' M':Math.round(s.p*1000)+' k'}</b></div>
-   <div><span>Voies</span><b>${NET.adj[c].length}</b></div><div><span>Ressource</span><b>${s.mine?esc(s.res)+' ('+s.mine+' kt/sem)':s.port?(s.port>=0.6?'Port maritime':'Port fluvial'):'—'}</b></div></div>
+   <div><span>Voyageurs en attente</span><b>${Math.round(poolNow(c)).toLocaleString('fr')} / ${poolMax(c).toLocaleString('fr')}</b></div><div><span>Ressource</span><b>${s.mine?esc(s.res)+' ('+s.mine+' kt/sem)':s.port?(s.port>=0.6?'Port maritime':'Port fluvial'):'—'}</b></div></div>
    ${rs.length?'<h4 class="sec">VOS LIGNES</h4>'+rs.map(r=>`<div class="unit" data-act="route" data-v="${r.id}"><i class="cb" style="background:${r.color}"></i><div><b>${esc(r.name)}</b> · ${esc(stationName(r.a))} ⇄ ${esc(stationName(r.b))}</div></div>`).join(''):''}
    ${!NET.adj[c].length?'<div class="mut">Pas de voie ferrée dans cette ville (pour l\'instant).</div>':G.hubs.includes(c)?`<div class="hubok">⭐ Hub de votre compagnie · ${esc([...gaugesAt(c)].map(g=>GAUGES[g]).join(', '))}</div><button class="go wide" data-act="routefrom" data-v="${c}">CRÉER UN ITINÉRAIRE D'ICI</button>`
      :`<div class="mut">Établissez un hub ici pour y ouvrir des lignes. Écartement local : ${esc([...gaugesAt(c)].map(g=>GAUGES[g]).join(', ')||'—')}.</div><button class="go wide" data-act="hub" data-v="${c}">⭐ ÉTABLIR UN HUB · ${fmt$(hubCost(c))}</button>`}`); }
@@ -254,8 +287,8 @@ const ACT={
   open:b=>openModal(b.dataset.v), close:()=>closeModal(), mtab:b=>{ UI.mtab[b.dataset.k]=b.dataset.v; UI.model=null; renderModal(); },
   ff:b=>{ UI.fleetFilter=b.dataset.v; renderModal(); }, model:b=>{ UI.model=b.dataset.v||null; renderModal(); },
   train:b=>openModal('train',+b.dataset.v), route:b=>openModal('route',+b.dataset.v),
-  assign:b=>{ UI.form.train=+b.dataset.v; const r=routeOfTrain(trainById(UI.form.train)); if(r){ UI.form.a=r.a; UI.form.b=r.b; } UI.mtab.yard='routes'; UI.model=null; openModal('yard'); },
-  routefrom:b=>{ UI.form.a=b.dataset.v; const tr=G.trains.find(t=>(t.state==='yard'||t.state==='station')&&reachable(b.dataset.v,MODELS[t.model]).size); if(tr) UI.form.train=tr.id; UI.mtab.yard='routes'; UI.model=null; openModal('yard'); },
+  assign:b=>{ const t=trainById(+b.dataset.v); if(t.route) startEdit(t.route); else startEdit(null,t.id); },
+  routefrom:b=>{ const c=b.dataset.v, tr=G.trains.find(t=>(t.state==='yard'||t.state==='station')&&reachable(c,MODELS[t.model]).size); if(!tr){ toast('Aucun train libre ne peut rouler ici : commandez-en un adapté.','bad'); return; } startEdit(null,tr.id,c); },
   mkroute:()=>{ const f=UI.form; if(res(createRoute(f.train,f.a,f.b,f.stop,f.name.trim()),'Itinéraire créé ! Faites partir le train depuis « À la gare ».')){ f.name=''; drawRoutes(); updateTrains(); fitAll(); closeModal(); UI.drawer=true; UI.dtab='station'; renderDrawer(); saveAll(); } },
   delroute:b=>{ if(!armed(b,'Confirmer ?')) return; if(res(deleteRoute(+b.dataset.v),'Ligne supprimée.')){ closeModal(); drawRoutes(); renderDrawer(); saveAll(); } },
   zoomroute:b=>{ const r=routeById(+b.dataset.v); closeModal(); map.fitBounds(geom(r).out.nodes.map(c=>[STATIONS[c].la,STATIONS[c].lo]),{padding:[50,50]}); },
@@ -278,6 +311,17 @@ const ACT={
   import:()=>{ const i=document.createElement('input'); i.type='file'; i.accept='.json'; i.onchange=()=>{ const fr=new FileReader(); fr.onload=()=>{ try{ if(!adopt(JSON.parse(fr.result))) throw 0; saveAll(); toast('Partie importée.'); closeModal(); fullRedraw(); }catch(e){ toast('Fichier invalide.','bad'); } }; fr.readAsText(i.files[0]); }; i.click(); },
   reset:b=>{ if(!armed(b,'Effacer la partie ? Cliquez encore')) return; openModal('newgame'); },
   startgame:()=>{ newGame($('#ng-name').value.trim()||'Hakvision Rail',$('#ng-start').value); UI.form.a=G.start; UI.sel.clear(); closeModal(); saveAll(); fullRedraw(); map.setView([STATIONS[G.start].la,STATIONS[G.start].lo],6); openModal('help'); },
+  newroute:()=>startEdit(null,UI.form.train,UI.form.a),
+  editroute:b=>startEdit(+b.dataset.v),
+  saveroute:()=>{ const E=UI.edit, opt={stops:E.stops,direct:E.direct,name:E.name.trim()||undefined,color:E.color};
+    if(E.id){ if(res(updateRoute(E.id,{a:E.a,b:E.b,stops:E.stops,direct:E.direct,name:opt.name||routeById(E.id).name,color:E.color}),'Itinéraire mis à jour.')){ closeModal(); drawRoutes(); renderDrawer(); updateTrains(); saveAll(); } return; }
+    if(res(createRoute(E.train,E.a,E.b,opt),'Ligne créée ! Faites partir le train depuis « À la gare ».')){ drawRoutes(); updateTrains(); fitAll(); closeModal(); UI.drawer=true; UI.dtab='station'; renderDrawer(); saveAll(); } },
+  stopsall:()=>{ const E=UI.edit; E.stops=pathOf(E.a,E.b,editModel()).nodes.slice(); renderModal(); },
+  stopsbig:()=>{ const E=UI.edit; E.stops=pathOf(E.a,E.b,editModel()).nodes.filter(c=>c===E.a||c===E.b||STATIONS[c].p>=0.3||G.hubs.includes(c)); renderModal(); },
+  stopsnone:()=>{ const E=UI.edit; E.stops=[E.a,E.b]; renderModal(); },
+  color:b=>{ UI.edit.color=b.dataset.v; renderModal(); },
+  ctrl:b=>{ const t=trainById(+b.dataset.v); t.ctrl=Math.max(0,Math.min(4,ctrlOf(t)+ +b.dataset.d)); renderModal(); saveAll(); },
+  unpark:b=>{ if(res(setService(trainById(+b.dataset.v),true),'Train remis en service.')){ renderDrawer(); updateTrains(); saveAll(); } },
   hub:b=>{ const c=b.dataset.v; if(res(buyHub(c),'⭐ Hub établi à '+stationName(c)+' !')){ UI.form.a=c; drawStations(); renderModal(); saveAll(); } },
   fly:b=>{ const s=STATIONS[b.dataset.v]; closeModal(); map.setView([s.la,s.lo],7); setTimeout(()=>openModal('station',b.dataset.v),350); },
   region:b=>{ const r=MAP_REGIONS[+b.dataset.v]; closeModal(); map.setView([r[1],r[2]],r[3]); },
@@ -288,8 +332,13 @@ document.addEventListener('change',e=>{ const t=e.target;
   if(t.dataset.sel){ const id=+t.dataset.sel; if(t.checked) UI.sel.add(id); else UI.sel.delete(id); renderDrawer(); return; }
   if(t.dataset.selall){ for(const tr of trainsIn('station')) if(t.checked) UI.sel.add(tr.id); else UI.sel.delete(tr.id); renderDrawer(); return; }
   if(t.dataset.f){ const k=t.dataset.f; UI.form[k]=k==='train'?+t.value:t.value; if(k!=='name') renderModal(); return; }
+  if(t.dataset.e){ const E=UI.edit, k=t.dataset.e; if(k==='direct') E.direct=t.checked; else if(k==='name'){ E.name=t.value; return; } else { E[k]=k==='train'?+t.value:t.value; E.stops=null; if(k==='a') UI.form.a=t.value; } renderModal(); return; }
+  if(t.dataset.stop2){ const E=UI.edit, c=t.dataset.stop2; if(t.checked){ if(!E.stops.includes(c)) E.stops.push(c); } else E.stops=E.stops.filter(x=>x!==c); renderModal(); return; }
+  if(t.dataset.svc){ const tr=trainById(+t.dataset.svc); if(res(setService(tr,t.checked),t.checked?'Train en service.':'Train mis au garage.')){ renderDrawer(); updateTrains(); saveAll(); } renderModal(); return; }
+  if(t.dataset.spd){ const tr=trainById(+t.dataset.spd); tr.speed=+t.value; saveAll(); renderModal(); return; }
   if(t.dataset.g==='scale'){ G.scale=+t.value; saveAll(); toast('Vitesse modifiée.'); } });
-document.addEventListener('input',e=>{ if(e.target.dataset.f==='name') UI.form.name=e.target.value; });
+document.addEventListener('input',e=>{ if(e.target.dataset.f==='name') UI.form.name=e.target.value; if(e.target.dataset.e==='name') UI.edit.name=e.target.value;
+  if(e.target.dataset.spd){ const l=e.target.closest('label').querySelector('b'); if(l) l.textContent=Math.round(e.target.value*100)+' %'; } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.modal&&UI.modal.name!=='newgame') closeModal(); });
 
 /* ---------- sauvegarde en ligne (compte claude.ai) + navigateur ---------- */

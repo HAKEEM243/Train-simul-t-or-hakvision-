@@ -67,6 +67,18 @@ st('LUB','Lubumbashi',-11.66,27.48,2.6,'CD',{tz:2,mine:20,res:'cuivre'});
 st('KPS','Kipushi',-11.76,27.25,0.15,'CD',{tz:2,mine:6,res:'cuivre-zinc'});
 st('TSB','Tshimbulu',-6.48,22.85,0.1,'CD',E2);
 st('LBD','Lubudi',-9.95,25.97,0.05,'CD',{tz:2,mine:4,res:'ciment'});
+st('KMW','Kimwenza',-4.47,15.29,0.08,'CD');
+st('MDB','Madimba',-4.97,15.13,0.05,'CD');
+st('KWN','Kwilu-Ngongo',-5.49,14.68,0.06,'CD',{mine:3,res:'sucre'});
+st('LUF','Lufu',-5.63,14.22,0.03,'CD');
+st('MPZ','Mpozo',-5.79,13.6,0.02,'CD');
+st('KBV','Kambove',-10.87,26.6,0.05,'CD',E2);
+st('FGR','Fungurume',-10.62,26.31,0.1,'CD',{tz:2,mine:15,res:'cuivre-cobalt'});
+st('LPT','Luputa',-7.13,23.72,0.1,'CD',E2);
+st('NMB','Niemba',-5.95,28.43,0.03,'CD',E2);
+st('KKG','Kakenge',-4.86,21.1,0.02,'CD',E2);
+st('MKD','Mukanda',-10.53,24.0,0.02,'CD',E2);
+st('KSM2','Kasumbalesa',-12.28,27.82,0.1,'CD',E2);
 st('SAK','Sakania',-12.75,28.56,0.03,'CD',E2);
 st('MUT','Mutshatsha',-10.65,24.45,0.03,'CD',E2);
 st('KSJ','Kasaji',-10.37,23.45,0.03,'CD',E2);
@@ -94,6 +106,10 @@ st('UVR','Uvira',-3.40,29.14,0.6,'CD',E2);
 st('BZV','Brazzaville',-4.27,15.27,2.5,'CG',{port:0.5});
 st('MDL','Mindouli',-4.27,14.35,0.03,'CG');
 st('LTT','Loutété',-4.29,13.86,0.03,'CG',{mine:5,res:'ciment'});
+st('HND','Hinda',-4.6,12.07,0.03,'CG');
+st('MVT','Mvouti',-4.25,12.47,0.03,'CG');
+st('MDG','Madingou',-4.15,13.55,0.05,'CG');
+st('KNK','Kinkala',-4.36,14.76,0.04,'CG');
 st('NKY','Nkayi',-4.18,13.29,0.1,'CG');
 st('MBL','Mont-Bélo',-4.21,12.95,0.02,'CG');
 st('DOL','Dolisie',-4.20,12.67,0.15,'CG');
@@ -210,17 +226,17 @@ const GAUGES={C:'Voie du Cap (1067 mm)',M:'Voie métrique (1000 mm)',S:'Voie nor
 const TRACKS=[];
 function tk(list,v,g,el,tr,o){ for(let i=0;i<list.length-1;i++) TRACKS.push([list[i],list[i+1],v,g,!!el,tr||1,o||{}]); }
 // RDC — Matadi–Kinshasa (SCTP, ex-ONATRA), voie du Cap, usée
-tk(['MAT','SGL','KMP','LKL','MBG','INK','KSG','KIN'],45,'C',0,1,{op:'SCTP'});
+tk(['MAT','MPZ','SGL','LUF','KMP','LKL','KWN','MBG','INK','MDB','KSG','KMW','KIN'],45,'C',0,1,{op:'SCTP'});
 // RDC — réseau SNCC (Katanga, Kasaï, Maniema) : ancien et dégradé
-tk(['SAK','LUB','LKS'],50,'C',0,1,{op:'SNCC'});
-tk(['LKS','TNK','KWZ'],45,'C',0,1,{op:'SNCC'});
-tk(['KWZ','MUT','KSJ','DIL'],30,'C',0,1,{op:'SNCC'});
+tk(['SAK','KSM2','LUB','LKS'],50,'C',0,1,{op:'SNCC'});
+tk(['LKS','KBV','FGR','TNK','KWZ'],45,'C',0,1,{op:'SNCC'});
+tk(['KWZ','MUT','MKD','KSJ','DIL'],30,'C',0,1,{op:'SNCC'});
 tk(['DIL','LUA'],30,'C',0,1,{op:'SNCC'});
 tk(['TNK','LBD','BKM','KMN'],35,'C',0,1,{op:'SNCC'});
-tk(['KMN','KNM','MWD','TSB','KGA'],30,'C',0,1,{op:'SNCC'});
+tk(['KMN','KNM','LPT','MWD','TSB','KGA'],30,'C',0,1,{op:'SNCC'});
 tk(['LUB','KPS'],40,'C',0,1,{op:'SNCC'});
-tk(['KGA','MWK','ILB'],25,'C',0,1,{op:'SNCC'});
-tk(['KMN','KBL','NYZ','KLM'],25,'C',0,1,{op:'SNCC'});
+tk(['KGA','MWK','KKG','ILB'],25,'C',0,1,{op:'SNCC'});
+tk(['KMN','KBL','NYZ','NMB','KLM'],25,'C',0,1,{op:'SNCC'});
 tk(['KBL','KGL','KBB','KND'],20,'C',0,1,{op:'SNCC'});
 tk(['KIS','UBD'],25,'M',0,1,{op:'SNCC'});
 // RDC — anciennes lignes à rouvrir
@@ -230,7 +246,7 @@ tk(['BOM','TSH'],0,'C',0,1,{hs:1,op:'Mayumbe'});
 // Lac Tanganyika : bac ferroviaire Kalemie ↔ Kigoma
 TRACKS.push(['KLM','KGM',15,'*',false,1,{ferry:1,km:140,op:'Bac'}]);
 // Congo-Brazzaville — Chemin de fer Congo-Océan (CFCO), ligne COMILOG
-tk(['PNR','DOL','MBL','NKY','LTT','MDL','BZV'],45,'C',0,1,{op:'CFCO'});
+tk(['PNR','HND','MVT','DOL','MBL','NKY','MDG','LTT','MDL','KNK','BZV'],45,'C',0,1,{op:'CFCO'});
 tk(['MBL','MKB','MBD'],0,'C',0,1,{hs:1,op:'COMILOG'});
 // Angola — Chemin de fer de Benguela (corridor de Lobito), ligne de Luanda
 tk(['LOB','HUA','KUI','LUE','LUA'],80,'C',0,1,{op:'CFB'});

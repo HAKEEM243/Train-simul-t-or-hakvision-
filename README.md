@@ -10,6 +10,8 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 ## Le jeu
 Jeu de gestion de trains en temps réel (accéléré), centré sur le **Congo** :
 - **Hubs dans le monde entier** : chaque ligne part d'un de vos hubs ; établissez-en au Congo, en Afrique, en Europe, en Russie, en Inde, en Chine, en Amérique, en Océanie (444 gares, 79 pays, fenêtre MONDE pour voyager).
+- **Arrêts au choix** : un trajet direct ou les gares cochées une à une (Kinshasa–Matadi passe par 11 villes). Voyageurs en attente dans chaque gare, montées et descentes à chaque arrêt, voyageurs à bord en direct.
+- **Contrôleurs et contraventions** : fraude selon la région, contrôleurs à bord (0 à 4), amendes encaissées ; vitesse réglable, mise au garage, subvention, nom et couleur des lignes.
 - **Une ligne = un train.** Au DÉPÔT → ITINÉRAIRES, choisissez un train, une gare de départ et d'arrivée sur le vrai réseau
   (Matadi–Kinshasa, réseau SNCC du Katanga et du Kasaï, Congo-Océan, corridor de Lobito, TAZARA…).
 - **Faire partir** les trains depuis la liste « À LA GARE » ; ils roulent sur la carte ; à l'arrivée la recette tombe.
