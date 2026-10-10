@@ -22,6 +22,7 @@ Outils pour les régénérer : `tools/build_relief.py`, `tools/build_rails.py` (
 Jeu de gestion de trains en temps réel (accéléré), centré sur le **Congo** :
 - **Hubs dans le monde entier** : chaque ligne part d'un de vos hubs ; établissez-en au Congo, en Afrique, en Europe, en Russie, en Inde, en Chine, en Amérique, en Océanie (444 gares, 79 pays, fenêtre MONDE pour voyager).
 - **Arrêts au choix** : un trajet direct ou les gares cochées une à une (Kinshasa–Matadi passe par 11 villes). Voyageurs en attente dans chaque gare, montées et descentes à chaque arrêt, voyageurs à bord en direct.
+- **Manifeste des passagers** : pour chaque trajet, chaque voyageur (fictif) avec nom, âge, nationalité, métier, gare de montée et de descente, moyen d'arrivée à la gare, motif du voyage, classe, prix, place, bagages, fraude (verbalisé ou non), avis ; statistiques, filtres et recherche. Manifeste du fret par wagon.
 - **Contrôleurs et contraventions** : fraude selon la région, contrôleurs à bord (0 à 4), amendes encaissées ; vitesse réglable, mise au garage, subvention, nom et couleur des lignes.
 - **Une ligne = un train.** Au DÉPÔT → ITINÉRAIRES, choisissez un train, une gare de départ et d'arrivée sur le vrai réseau
   (Matadi–Kinshasa, réseau SNCC du Katanga et du Kasaï, Congo-Océan, corridor de Lobito, TAZARA…).
@@ -42,6 +43,7 @@ Les noms de trains, illustrations et textes sont propres à ce jeu.
 | `data-world.js` | reste du monde : gares, voies, écartements B et R, trains, villes de départ, régions de la carte |
 | `network.js` | graphe des voies, plus court chemin compatible, profils de vitesse, itinéraires avec arrêts |
 | `game.js` | état unique `G`, trains, itinéraires, départs/arrivées, carburant, usure, objectifs, boutique, sauvegarde |
+| `passengers.js` | manifeste des passagers et du fret (génération déterministe, fenêtre « Passagers ») |
 | `map.js` | carte MapLibre : relief, couches, voies, lignes, gares, trains animés, vue 3D |
 | `ui.js` | barre du haut, menu, liste des trains, fenêtres, sauvegarde en ligne |
 | `sw.js`, `manifest.json` | appli installable, hors-ligne |

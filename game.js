@@ -116,7 +116,7 @@ function tripPlan(tr,dirOverride,rtOverride,usePool){ const rt=rtOverride||route
   const dir=dirOverride||(tr.at==='a'?'out':'ret'), leg=g[dir], m=MODELS[tr.model], st=leg.stops, n=st.length, t=now();
   const same=Math.max(1,G.routes.filter(r=>r!==rtOverride&&[r.a,r.b].sort().join()===[rt.a,rt.b].sort().join()).length+(rtOverride&&!G.routes.includes(rtOverride)?1:0));
   const stops=st.map(s=>({code:s.code,km:s.km,arr:s.arr,dep:s.dep,on:0,off:0,onboard:0,wait:Math.round(poolNow(s.code,t)),max:poolMax(s.code)}));
-  let pax=0, rev=0, fareSum=0;
+  let pax=0, rev=0, fareSum=0, od=[];
   if(m.pax){ const pairs=[];
     for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ const km=st[j].km-st[i].km, h=Math.max(0.2,(st[j].arr-st[i].dep)/HOUR), sp=Math.min(2.2,Math.max(0.4,Math.pow(km/h/50,0.6)));
       pairs.push({i,j,km,d:paxDemand(st[i].code,st[j].code,km)*0.15*sp*(m.comfort&&h>5?1.3:1)/same}); }
@@ -126,6 +126,7 @@ function tripPlan(tr,dirOverride,rtOverride,usePool){ const rt=rtOverride||route
     let onb=0; for(let i=0;i<n;i++){ for(const p of pairs) if(p.j===i&&p.x) onb-=p.x;
       const mine=pairs.filter(p=>p.i===i), want=mine.reduce((s,p)=>s+p.d,0), k=want>0?Math.min(1,Math.max(0,m.pax-onb)/want):0;
       for(const p of mine){ p.x=p.d*k; onb+=p.x; } }
+    od=pairs.filter(p=>p.x>0).map(p=>[p.i,p.j,p.x]);
     for(const p of pairs){ const x=p.x||0; stops[p.i].on+=x; stops[p.j].off+=x; pax+=x; const f=fareOf(st[p.i].code,p.km)*(m.comfort&&p.km>400?m.comfort:1); rev+=x*f; fareSum+=x*f; } }
   let ob=0; stops.forEach((s,i)=>{ s.on=Math.round(s.on); s.off=i===n-1?ob:Math.min(ob,Math.round(s.off)); if(i===n-1) s.on=0; ob=Math.max(0,ob+s.on-s.off); s.onboard=ob; });
   let tons=0; if(m.t){ const a=st[0].code,b=st[n-1].code; tons=Math.min(m.t,frtDemand(a,b)/7*0.3/same+m.t*0.15); rev+=tons*leg.km*regionOf(a).frt; }
@@ -136,7 +137,7 @@ function tripPlan(tr,dirOverride,rtOverride,usePool){ const rt=rtOverride||route
   rev=rev-lost+fines; rev*=1+sub;
   const fuelK=0.55+0.45*spd*spd, fuel=m.fpk?leg.km*m.fpk*fuelK:0, energy=m.epk?leg.km*m.epk*fuelK:0;
   const bad=leg.edges.reduce((s,e)=>s+(e.v<40?e.km:0),0)/leg.km;
-  return {dir,leg,stops,km:leg.km,pax:Math.round(pax),tons:Math.round(tons),rev,fuel,energy,wear:leg.km/1000*7*(1+bad*0.8)*(0.7+0.3*spd),T:leg.T/spd,lf:m.pax?Math.min(1,Math.max(...stops.map(s=>s.onboard))/m.pax):tons/m.t,
+  return {od,dir,leg,stops,km:leg.km,pax:Math.round(pax),tons:Math.round(tons),rev,fuel,energy,wear:leg.km/1000*7*(1+bad*0.8)*(0.7+0.3*spd),T:leg.T/spd,lf:m.pax?Math.min(1,Math.max(...stops.map(s=>s.onboard))/m.pax):tons/m.t,
     fraud:Math.round(fraud),caught:Math.round(caught),fines:Math.round(fines),lost:Math.round(lost),ctrl,ctrlCost:Math.round(ctrlCost),sub:Math.round(sub*100)}; }
 
 /* ---------- départ et arrivée ---------- */
@@ -149,8 +150,13 @@ function depart(tr,at){ const e=canDepart(tr); if(e) return e; const t=at||now()
   G.fuel-=p.fuel; G.energy-=p.energy; G.cash-=p.ctrlCost; book('staff',p.ctrlCost,t);
   for(const s of p.stops) if(s.on) poolTake(s.code,s.on,t);
   const luck=0.85+0.15*hash(t/1000+tr.id), breakdown=tr.wear>80&&hash(t/777+tr.id)<0.2, k=x=>Math.round(x*luck);
-  tr.trip={dir:p.dir,pax:k(p.pax),tons:k(p.tons),rev:Math.round(p.rev*luck*(breakdown?0.7:1)),km:p.km,wear:p.wear,breakdown,fraud:k(p.fraud),caught:k(p.caught),fines:k(p.fines),lost:k(p.lost),sub:p.sub,ctrl:p.ctrl,
-    stops:p.stops.map(s=>({c:s.code,on:k(s.on),off:k(s.off),ob:k(s.onboard),arr:s.arr,dep:s.dep}))};
+  // matrice origine → destination du trajet (sert au manifeste des passagers) ; montées, descentes et voyageurs à bord en découlent
+  const od=p.od.map(([i,j,x])=>[i,j,Math.round(x*luck)]).filter(x=>x[2]>0), pax=od.reduce((s,x)=>s+x[2],0);
+  const stops=p.stops.map(s=>({c:s.code,km:s.km,on:0,off:0,ob:0,arr:s.arr,dep:s.dep})); for(const [i,j,x] of od){ stops[i].on+=x; stops[j].off+=x; }
+  let ob=0; for(const s of stops){ ob+=s.on-s.off; s.ob=ob; }
+  const fraud=Math.min(pax,k(p.fraud)), caught=Math.min(fraud,k(p.caught));
+  tr.trip={dir:p.dir,pax,tons:k(p.tons),rev:Math.round(p.rev*luck*(breakdown?0.7:1)),km:p.km,wear:p.wear,breakdown,fraud,caught,fines:k(p.fines),lost:k(p.lost),sub:p.sub,ctrl:p.ctrl,
+    od,stops,seed:Math.floor(t/1000)+tr.id*7919,route:routeOfTrain(tr).id,model:tr.model,dep:t};
   tr.state='enroute'; tr.dir=p.dir; tr.dep=t; tr.dur=Math.max(60e3,p.T/G.scale*(breakdown?1.5:1)); return null; }
 /* où en est le train : dernier arrêt passé, prochain arrêt, voyageurs à bord (fonction du temps) */
 function tripProgress(tr,t){ const x=tr.trip; if(!x||!x.stops) return null; const g=geom(routeOfTrain(tr)), leg=g[tr.dir], f=Math.min(1,((t||now())-tr.dep)/tr.dur)*leg.T;

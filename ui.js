@@ -2,7 +2,7 @@
    Hakvision Rail — interface : carte claire, barre du haut, menu hexagonal, tiroir des trains, fenêtres.
    ========================================================= */
 'use strict';
-const APP_V='3.0.0';
+const APP_V='3.1.0';
 const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const UI={drawer:false,dtab:'station',sel:new Set(),modal:null,mtab:{yard:'fleet'},fleetFilter:'all',model:null,form:{train:null,a:'KIN',b:null,stop:'omni',name:''}};
 
@@ -109,7 +109,7 @@ function closeModal(){ UI.modal=null; $('#modal').hidden=true; $('#modal').inner
 function sheet(title,body,tabs,noClose){ return `<div class="sheet">${noClose?'':`<button class="mx" data-act="close" aria-label="Fermer">${ico('close',26)}</button>`}<h2>${title}</h2>${tabs||''}<div class="sbody">${body}</div></div>`; }
 function tabsHtml(key,list){ return `<nav class="stabs">${list.map(([k,l])=>`<button class="${UI.mtab[key]===k?'on':''}" data-act="mtab" data-k="${key}" data-v="${k}">${l}</button>`).join('')}</nav>`; }
 function renderModal(){ const M=UI.modal, el=$('#modal'); if(!M){ el.hidden=true; return; } el.hidden=false;
-  const f={redit:mRouteEdit,world:mWorld,yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
+  const f={pax:mPax,cargo:mCargo,redit:mRouteEdit,world:mWorld,yard:mYard,check:mCheck,shop:mShop,company:mCompany,fuel:mFuel,finance:mFinance,service:mService,mail:mMail,settings:mSettings,help:mHelp,train:mTrain,route:mRoute,station:mStation,newgame:mNewGame}[M.name];
   const sc=el.querySelector('.sbody'), top=sc?sc.scrollTop:0; el.innerHTML=f(M.arg); const sb=el.querySelector('.sbody'); if(sb&&M.keep) sb.scrollTop=top; M.keep=true; }
 const sOpts=(sel,filter)=>{ const order=['CD','CG',...Object.keys(COUNTRIES).filter(c=>c!=='CD'&&c!=='CG').sort((a,b)=>COUNTRIES[a][0].localeCompare(COUNTRIES[b][0]))];
   return order.map(c=>{ const l=Object.values(STATIONS).filter(s=>s.c===c&&(!filter||filter(s.code))).sort((x,y)=>x.n.localeCompare(y.n)); return l.length?`<optgroup label="${esc(COUNTRIES[c][0])}">${l.map(s=>`<option value="${s.code}" ${s.code===sel?'selected':''}>${esc(s.n)}</option>`).join('')}</optgroup>`:''; }).join(''); };
@@ -215,8 +215,9 @@ function mTrain(id){ const t=trainById(id); if(!t) return sheet('TRAIN','<div cl
   if(t.state==='enroute'&&t.trip&&t.trip.stops){ const x=tripProgress(t), dur=t.dur, lt=x.legT;
     live=`<h4 class="sec">EN DIRECT</h4><div class="prev"><b>${x.onboard}</b> voyageurs à bord${t.trip.tons?' · '+t.trip.tons+' t':''} · ${x.atStop?'à quai à <b>'+esc(stationName(x.stops[x.last].c))+'</b>':'prochain arrêt <b>'+esc(stationName(x.stops[x.next].c))+'</b>'} · terminus dans ${fmtIn(t.dep+t.dur-now())}</div>
      <div class="tlw"><table class="tl"><tr><th>Gare</th><th>Heure</th><th>Montent</th><th>Desc.</th><th>À bord</th></tr>${x.stops.map((s,i)=>`<tr class="${i<x.last||(i===x.last&&!x.atStop)?'past':i===x.next?'next':''}"><td>${esc(stationName(s.c))}</td><td>${new Date(t.dep+(s.arr||0)/lt*dur).toLocaleTimeString('fr',{hour:'2-digit',minute:'2-digit'})}</td><td class="pos">+${s.on}</td><td class="neg">−${s.off}</td><td>${s.ob}</td></tr>`).join('')}</table></div>
+     <button class="go wide" data-act="pax" data-v="${t.id}">${m.kind==='frt'?'📦 MANIFESTE DU FRET':'👥 VOIR LES '+t.trip.pax+' PASSAGERS'}</button>
      ${t.trip.ctrl?`<div class="mut">👮 ${t.trip.ctrl} contrôleur(s) à bord · ${t.trip.fraud} fraudeurs estimés, ${t.trip.caught} verbalisés (+${fmt$(t.trip.fines)})</div>`:`<div class="mut">Aucun contrôleur à bord : ${t.trip.fraud} voyageurs sans billet.</div>`}`; }
-  const last=t.last?`<h4 class="sec">DERNIER TRAJET</h4><div class="prev">${t.last.pax?t.last.pax+' voyageurs':''}${t.last.tons?' · '+t.last.tons+' t':''} · recette ${fmt$(t.last.rev)}${t.last.fraud!=null&&t.last.pax?`<br>Fraude : ${t.last.fraud} sans billet (−${fmt$(t.last.lost)}) · ${t.last.caught} verbalisés (+${fmt$(t.last.fines)})`:''}${t.last.sub?' · subvention '+t.last.sub+' %':''}</div>`:'';
+  const last=t.last?`<h4 class="sec">DERNIER TRAJET</h4>${t.last.stops?`<button class="edit" data-act="pax" data-v="${t.id}" data-w="last">${m.kind==='frt'?'📦 MANIFESTE DU FRET':'👥 PASSAGERS DU DERNIER TRAJET ('+t.last.pax+')'} →</button>`:''}<div class="prev">${t.last.pax?t.last.pax+' voyageurs':''}${t.last.tons?' · '+t.last.tons+' t':''} · recette ${fmt$(t.last.rev)}${t.last.fraud!=null&&t.last.pax?`<br>Fraude : ${t.last.fraud} sans billet (−${fmt$(t.last.lost)}) · ${t.last.caught} verbalisés (+${fmt$(t.last.fines)})`:''}${t.last.sub?' · subvention '+t.last.sub+' %':''}</div>`:'';
   return sheet('DÉTAILS',`<div class="mcard big"><h5>${esc(t.name.toUpperCase())}</h5><div class="pic">${trainArt(t.model)}</div></div>
    <div class="dgrid">${card('⛽','Consommation',m.el?(m.epk*(0.55+0.45*spd*spd)).toFixed(1)+' kWh/km':(m.fpk*(0.55+0.45*spd*spd)).toFixed(2)+' L/km')}${card('⏱','Vitesse',Math.round(m.vmax*spd)+' km/h')}
     ${card('⚙','Usure',t.wear.toFixed(2)+' %',t.wear>80?'neg':t.wear>30?'warn':'')}${card('🛤','Écartement',esc(GAUGES[m.g].split(' (')[0]))}${card('👥','Voyageurs',m.pax+' PAX')}${card('📦','Fret',m.t+' T')}</div>
@@ -293,6 +294,9 @@ const ACT={
   color:b=>{ UI.edit.color=b.dataset.v; renderModal(); },
   ctrl:b=>{ const t=trainById(+b.dataset.v); t.ctrl=Math.max(0,Math.min(4,ctrlOf(t)+ +b.dataset.d)); renderModal(); saveAll(); },
   unpark:b=>{ if(res(setService(trainById(+b.dataset.v),true),'Train remis en service.')){ renderDrawer(); updateTrains(); saveAll(); } },
+  pax:b=>{ Object.assign(PAXUI,{id:+b.dataset.v,which:b.dataset.w||'trip',f:'all',st:'',q:'',n:40,open:null}); openModal(MODELS[trainById(+b.dataset.v).model].kind==='frt'?'cargo':'pax'); },
+  paxf:b=>{ PAXUI.f=b.dataset.v; PAXUI.n=40; renderModal(); }, paxmore:()=>{ PAXUI.n+=60; renderModal(); },
+  paxo:b=>{ const id=+b.dataset.v; PAXUI.open=PAXUI.open===id?null:id; renderModal(); },
   hub:b=>{ const c=b.dataset.v; if(res(buyHub(c),'⭐ Hub établi à '+stationName(c)+' !')){ UI.form.a=c; drawStations(); renderModal(); saveAll(); } },
   fly:b=>{ const s=STATIONS[b.dataset.v]; closeModal(); flyTo(s.la,s.lo,7.5); setTimeout(()=>openModal('station',b.dataset.v),1100); },
   region:b=>{ const r=MAP_REGIONS[+b.dataset.v]; closeModal(); flyTo(r[1],r[2],r[3]+0.3); },
@@ -304,12 +308,13 @@ document.addEventListener('change',e=>{ const t=e.target;
   if(t.dataset.sel){ const id=+t.dataset.sel; if(t.checked) UI.sel.add(id); else UI.sel.delete(id); renderDrawer(); return; }
   if(t.dataset.selall){ for(const tr of trainsIn('station')) if(t.checked) UI.sel.add(tr.id); else UI.sel.delete(tr.id); renderDrawer(); return; }
   if(t.dataset.f){ const k=t.dataset.f; UI.form[k]=k==='train'?+t.value:t.value; if(k!=='name') renderModal(); return; }
+  if(t.dataset.pst){ PAXUI.st=t.value; PAXUI.n=40; renderModal(); return; }
   if(t.dataset.e){ const E=UI.edit, k=t.dataset.e; if(k==='direct') E.direct=t.checked; else if(k==='name'){ E.name=t.value; return; } else { E[k]=k==='train'?+t.value:t.value; E.stops=null; if(k==='a') UI.form.a=t.value; } renderModal(); return; }
   if(t.dataset.stop2){ const E=UI.edit, c=t.dataset.stop2; if(t.checked){ if(!E.stops.includes(c)) E.stops.push(c); } else E.stops=E.stops.filter(x=>x!==c); renderModal(); return; }
   if(t.dataset.svc){ const tr=trainById(+t.dataset.svc); if(res(setService(tr,t.checked),t.checked?'Train en service.':'Train mis au garage.')){ renderDrawer(); updateTrains(); saveAll(); } renderModal(); return; }
   if(t.dataset.spd){ const tr=trainById(+t.dataset.spd); tr.speed=+t.value; saveAll(); renderModal(); return; }
   if(t.dataset.g==='scale'){ G.scale=+t.value; saveAll(); toast('Vitesse modifiée.'); } });
-document.addEventListener('input',e=>{ if(e.target.dataset.f==='name') UI.form.name=e.target.value; if(e.target.dataset.e==='name') UI.edit.name=e.target.value;
+let paxQT=0; document.addEventListener('input',e=>{ if(e.target.dataset.pq){ PAXUI.q=e.target.value; clearTimeout(paxQT); paxQT=setTimeout(()=>{ renderModal(); const i=document.querySelector('[data-pq]'); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length); } },350); return; } if(e.target.dataset.f==='name') UI.form.name=e.target.value; if(e.target.dataset.e==='name') UI.edit.name=e.target.value;
   if(e.target.dataset.spd){ const l=e.target.closest('label').querySelector('b'); if(l) l.textContent=Math.round(e.target.value*100)+' %'; } });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.modal&&UI.modal.name!=='newgame') closeModal(); });
 

@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'); const store={};
 let clock=Date.UTC(2026,9,10,8,0);
 const ctx={console,Math,JSON,Object,Array,Map,Set,String,Number,Infinity,isFinite,localStorage:{getItem:k=>store[k]??null,setItem:(k,v)=>{store[k]=String(v)}}};
 ctx.Date=class extends Date{ constructor(...a){ super(...(a.length?a:[clock])); } static now(){ return clock; } }; ctx.Date.UTC=Date.UTC;
-vm.createContext(ctx); for(const f of ['data.js','data-world.js','rails.js','network.js','game.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),ctx,{filename:f});
+vm.createContext(ctx); for(const f of ['data.js','data-world.js','rails.js','network.js','game.js','passengers.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),ctx,{filename:f});
 const run=c=>vm.runInContext(c,ctx); let fails=0; const ok=(c,m)=>{ console.log(c?'ok  ':'ÉCHEC',m); if(!c) fails++; };
 run(`newGame('Test','KIN')`);
 ok(run(`G.trains.length===1&&G.points===200`),'partie : 1 train, 200 points');
@@ -57,4 +57,17 @@ const w0=run(`poolNow('KIN')`); run(`depart(G.trains[0])`); ok(run(`poolNow('KIN
 clock+=5*60e3; const pr=run(`(()=>{ const x=tripProgress(G.trains[0]); return x&&x.onboard>=0; })()`); ok(pr,'voyageurs à bord pendant le trajet');
 run(`G.trains[0].speed=0.6`); clock+=60*60e3; run('tick()'); ok(run(`tripPlan(G.trains[0]).fuel`)<run(`(G.trains[0].speed=1,tripPlan(G.trains[0]).fuel)`),'rouler moins vite consomme moins');
 ok(run(`setService(G.trains[0],false)`)===null&&run(`G.trains[0].state`)==='yard'&&run(`setService(G.trains[0],true)`)===null&&run(`G.trains[0].state`)==='station','garage puis remise en service');
+// manifeste des passagers
+run(`newGame('Manifeste','KIN'); G.cash=1e6; createRoute(G.trains[0].id,'KIN','MAT'); G.trains[0].ctrl=2; depart(G.trains[0])`);
+const mf=run(`(()=>{ const tr=G.trains[0], M=manifestOf(tr), x=tr.trip; const nat={}; M.pax.forEach(p=>nat[p.nat]=(nat[p.nat]||0)+1);
+  return {n:M.pax.length,pax:x.pax,fr:M.pax.filter(p=>p.fraud).length,xf:x.fraud,ca:M.pax.filter(p=>p.caught).length,xc:x.caught,cd:nat.CD/M.pax.length,
+    ok:M.pax.every(p=>STATIONS[p.from]&&STATIONS[p.to]&&p.i<p.j&&p.first&&p.last&&p.how&&p.why&&p.age>0),ex:M.pax.slice(0,4).map(p=>p.flag+' '+p.first+' '+p.last+', '+p.age+' ans, '+p.job+' : '+stationName(p.from)+' → '+stationName(p.to)+' · '+p.how+' · '+p.why+' · '+p.bag+(p.fraud?' · FRAUDE'+(p.caught?' verbalisé':''):'')),
+    again:JSON.stringify(manifestOf(tr).pax[5])}; })()`);
+ok(mf.n===mf.pax,'manifeste : '+mf.n+' voyageurs = trajet ('+mf.pax+')');
+ok(mf.fr===mf.xf&&mf.ca===mf.xc,'fraudeurs ('+mf.fr+') et verbalisés ('+mf.ca+') identiques au trajet');
+ok(mf.ok,'chaque voyageur a nom, âge, gares, moyen d\'arrivée et motif');
+ok(mf.cd>0.6,'ligne au Congo : majorité de Congolais ('+Math.round(mf.cd*100)+' %)');
+mf.ex.forEach(e=>console.log('     '+e));
+run(`MANIFEST_CACHE.clear()`); ok(run(`JSON.stringify(manifestOf(G.trains[0]).pax[5])`)===mf.again,'manifeste identique après rechargement (déterministe)');
+clock+=60*60e3; run('tick()'); ok(run(`manifestOf(G.trains[0],G.trains[0].last).pax.length`)===mf.n,'manifeste du dernier trajet conservé');
 console.log(fails?fails+' échec(s)':'TOUS LES TESTS PASSENT'); process.exit(fails?1:0);

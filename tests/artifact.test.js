@@ -34,7 +34,12 @@ const srv=http.createServer((q,r)=>{ const u=decodeURIComponent(q.url.split('?')
     await f.click('#drawer [data-act=drawer]'); await f.evaluate(()=>{ G.trains[0].dep-=7*60e3; }); await f.waitForTimeout(800);
     await f.evaluate(()=>openModal('train',G.trains[0].id)); await f.waitForTimeout(200);
     ok(/EN DIRECT/.test(await f.textContent('#modal'))&&/CONTRÔLEURS/.test(await f.textContent('#modal')),tag+' fiche du train : voyageurs en direct et contrôleurs');
-    await p.screenshot({path:`${OUT}/tm-${tag}-8-direct.png`}); await f.evaluate(()=>closeModal());
+    await p.screenshot({path:`${OUT}/tm-${tag}-8-direct.png`});
+    await f.click('#modal [data-act=pax]'); await f.waitForSelector('.paxc');
+    ok(await f.evaluate(()=>document.querySelectorAll('.paxc').length>0&&/Fraudeurs/i.test(document.querySelector('#modal').textContent)),tag+' fenêtre Passagers');
+    await f.click('[data-act=paxf][data-v=fraud]'); await f.click('.paxc'); await f.waitForTimeout(150);
+    ok(await f.evaluate(()=>/Venu\(e\) à la gare/.test(document.querySelector('.pdet').textContent)&&/Fraude/.test(document.querySelector('.pdet').textContent)),tag+' fiche d\'un fraudeur détaillée');
+    await p.screenshot({path:`${OUT}/tm-${tag}-9-passagers.png`}); await f.evaluate(()=>closeModal());
     await f.waitForFunction(()=>typeof TRAIN_COUNT!=='undefined'&&TRAIN_COUNT>=1,null,{timeout:15000}).catch(()=>{}); ok(await f.evaluate(()=>MAP_READY&&TRAIN_COUNT>=1),tag+' carte chargée, train sur la carte'); await p.screenshot({path:`${OUT}/tm-${tag}-4-carte.png`});
     const cash=await f.evaluate(()=>G.cash); await f.evaluate(()=>{ G.trains[0].dep-=20*60e3; }); await f.waitForTimeout(900);
     ok(await f.evaluate(c=>G.cash>c&&G.trains[0].state==='station',cash),tag+' arrivée et recette');
