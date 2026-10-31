@@ -7,6 +7,11 @@ du **Congo** (RDC et Congo-Brazzaville), puis étendez-vous à l'Afrique et au m
 - En local : ouvrez `index.html` via un petit serveur (`npx http-server .` puis http://localhost:8080).
 - En ligne : GitHub Pages (voir plus bas). Sur iPhone : Safari → Partager → « Sur l'écran d'accueil » (appli installable, fonctionne hors-ligne).
 
+## 🏛️ Aussi dans ce dépôt : Président
+Le dossier [`president/`](president/) contient **Président**, un simulateur de chef d'État pour téléphone
+(application installable, hors ligne). Voir [`president/README.md`](president/README.md) pour le mettre en ligne
+avec Cloudflare Pages (répertoire de sortie : `president`).
+
 ## La carte
 Une vraie carte fabriquée pour le jeu (aucun service en ligne nécessaire) :
 - **relief ombré** calculé à partir des altitudes et profondeurs du monde entier (tuiles Terrarium de Mapzen, AWS Open Data),

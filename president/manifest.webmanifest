@@ -1,0 +1,30 @@
+{
+ "name": "Président — simulateur de chef d'État",
+ "short_name": "Président",
+ "lang": "fr",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#142647",
+ "theme_color": "#142647",
+ "description": "Gouverne un pays : ministres, économie, ressources, migrations, diplomatie et guerres.",
+ "icons": [
+  {
+   "src": "icons/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icons/icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
