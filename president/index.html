@@ -6361,7 +6361,11 @@ if(typeof document!=="undefined")document.head.insertAdjacentHTML("beforeend",`<
 </style>`);
 
 /* ===== 1. Les chantiers : réalistes, rapides ou instantanés, et « Terminer maintenant » ===== */
-const CSPD=[["Réaliste",1],["Rapide (4 fois plus vite)",.25],["Instantané",0]];
+const CSPD=[["Réaliste",1],["Rapide (4 fois plus vite)",.25],["Instantané",0],["1 jour","d1"]];
+/* Ordre d'affichage : Réaliste, Rapide, 1 jour, Instantané (les valeurs restent compatibles avec les anciennes sauvegardes) */
+const CSPD_ORD=[0,1,3,2],CSPD_TXT=["Les chantiers prennent le temps réel des travaux.","Chaque nouveau chantier dure quatre fois moins longtemps.","Tout ce que tu lances est terminé tout de suite. Le prix de la construction reste le même.","Tout ce que tu lances est terminé dès le lendemain. Le prix de la construction reste le même."];
+function cspdSeg(label,after){return segF(label,CSPD_ORD.map(i=>CSPD[i][0]),CSPD_ORD.indexOf(cspd()),v=>{S.cspd=CSPD_ORD[v];cspdApply();if(after)after()},CSPD_TXT[cspd()])}
+const dayNo=()=>S.tm*30+(S.day||1);
 const cspd=()=>S&&S.cspd!=null?S.cspd:0;
 /* Coût pour finir tout de suite : des équipes en plus, des heures supplémentaires */
 function rushCost(b){return S.econ.gdp*.00012*Math.max(1,b.left)/30*(b.tot>250?1.2:1)}
@@ -6373,11 +6377,14 @@ function projNow(p,free){if(!S.proj.includes(p))return;const rest=projRest(p)+(f
 function rushAllCost(){return S.builds.reduce((a,b)=>a+rushCost(b),0)+S.proj.reduce((a,p)=>a+projRest(p)+S.econ.gdp*.0002*(p.m-p.done),0)}
 function rushAll(free){for(const b of S.builds.slice())buildNow(b,free);for(const p of S.proj.slice())projNow(p,free)}
 /* Le réglage s'applique à chaque nouveau chantier */
-function cspdApply(){if(!S||S.over)return;const f=CSPD[cspd()][1];if(f===0){if(S.builds.length||S.proj.some(p=>!p.ppp||true))rushAll(true);return}
+function cspdApply(){if(!S||S.over)return;const f=CSPD[cspd()][1];
+  if(f==="d1"){for(const b of S.builds)if(!b.sp){b.sp=1;b.left=Math.min(b.left,1);b.tot=Math.max(1,Math.min(b.tot,1))}
+    for(const p of S.proj.slice()){if(p.d1==null){p.d1=dayNo();continue}if(dayNo()>p.d1)projNow(p,true)}return}
+  if(f===0){if(S.builds.length||S.proj.some(p=>!p.ppp||true))rushAll(true);return}
   if(f<1){for(const b of S.builds)if(!b.sp){b.sp=1;b.left=Math.max(1,Math.ceil(b.left*f));b.tot=Math.max(1,Math.ceil(b.tot*f))}for(const p of S.proj)if(!p.sp){p.sp=1;p.m=Math.max(1,Math.ceil(p.m*f))}}}
 function bName(b){try{const i=buildInfo(b);return i&&i.n?i:{i:"🏗️",n:"Chantier"}}catch(e){return{i:"🏗️",n:"Chantier"}}}
 function buildRow(b){const I=bName(b);return row({i:"⚡",t:`Terminer maintenant : ${I.n}`,s:`${Math.ceil(b.left/30)} mois restants · ${md(rushCost(b))}`,on:()=>{buildNow(b);render();if(!$("#panel").hidden)renderPanel()}})}
-PN.chantiers=()=>{const B=S.builds,P=S.proj;let h=segF("Durée des chantiers",CSPD.map(x=>x[0]),cspd(),v=>{S.cspd=v;cspdApply()},cspd()===2?"Tout ce que tu lances est terminé tout de suite. Le prix de la construction reste le même.":cspd()===1?"Chaque nouveau chantier dure quatre fois moins longtemps.":"Les chantiers prennent le temps réel des travaux.");
+PN.chantiers=()=>{const B=S.builds,P=S.proj;let h=cspdSeg("Durée des chantiers");
   if(!B.length&&!P.length)return{t:"🏗️ Tes chantiers",h:h+note("Aucun chantier en cours. Construis depuis la carte du pays, une ville ou les grands chantiers.")};
   h+=sec("En cours")+B.map(b=>{const I=bName(b);return`<div class="prog"><b>${I.i} ${esc(I.n)}</b><span class="tp"><i style="width:${progW(b)}%"></i></span><small>${Math.ceil(b.left/30)} mois</small></div>`+buildRow(b)}).join("")
     +P.map(p=>{const D=PROJECTS.find(q=>q.k===p.k)||{i:"🏗️"};const c=projRest(p)+S.econ.gdp*.0002*(p.m-p.done);return`<div class="prog"><b>${D.i} ${esc(p.n)}</b><span class="tp"><i style="width:${Math.round(p.done/p.m*100)}%"></i></span><small>${p.m-p.done} mois</small></div>`
@@ -6391,9 +6398,9 @@ const _pd29=PN.dep;PN.dep=id=>addRush(_pd29(id),b=>(b.t==="depB"||b.t==="depX")&
 const _pf29=PN.fac;PN.fac=id=>addRush(_pf29(id),b=>b.t==="fac"&&b.id===id);
 if(PN.co){const _pco29=PN.co;PN.co=id=>addRush(_pco29(id),b=>(b.t==="coB"||b.t==="coX")&&b.id===id)}
 const _tp29=TAB.projets;TAB.projets=()=>{const n=S.builds.length+S.proj.length;return card("🏗️ Tes chantiers",(n?row({i:"⚡",t:`${n} chantier${n>1?"s":""} en cours`,s:"Voir, accélérer ou tout terminer maintenant",on:()=>openP("chantiers")}):note("Aucun chantier en cours."))
-  +segF("Durée des chantiers",CSPD.map(x=>x[0]),cspd(),v=>{S.cspd=v;cspdApply();render()}))+_tp29()};
+  +cspdSeg("Durée des chantiers",()=>render()))+_tp29()};
 /* Dans « Que faire maintenant ? » */
-const _ns29=nextSteps;nextSteps=function(){const L=_ns29();const n=S.builds.length+S.proj.length;if(n&&cspd()<2)L.splice(Math.min(2,L.length-1),0,["🏗️",`${n} chantier${n>1?"s":""} en cours`,"Tu peux les terminer tout de suite",()=>openP("chantiers")]);return L.slice(0,5)};
+const _ns29=nextSteps;nextSteps=function(){const L=_ns29();const n=S.builds.length+S.proj.length;if(n&&cspd()!==2)L.splice(Math.min(2,L.length-1),0,["🏗️",`${n} chantier${n>1?"s":""} en cours`,"Tu peux les terminer tout de suite",()=>openP("chantiers")]);return L.slice(0,5)};
 const _r29=render;render=function(){if(S&&!S.over&&cspd())cspdApply();_r29()};
 const _ds29=dayStep;dayStep=function(){if(S&&!S.over&&cspd())cspdApply();_ds29()};
 
@@ -6437,6 +6444,22 @@ if(typeof document!=="undefined"){let before=null;
 
 /* Relancer un grand chantier déjà en cours l'accélère au lieu de ne rien faire */
 const _sp29=startProject;startProject=function(k){const p=S.proj.find(x=>x.k===k);if(p){const before=p.m;p.m=Math.max(p.done+1,p.m-3);if(p.m<before){pay(S.econ.gdp*.0003,"accélération du chantier");log(`🏗️ Le chantier « ${p.n} » est accéléré.`)}return}return _sp29(k)};
+
+
+/* ---------- Version 30 : constructions express, réglables depuis l'éditeur, le menu et chaque ville ---------- */
+function expressBlock(){const n=S.builds.length+S.proj.length;
+  return sec("⚡ Constructions express")+note("Choisis combien de temps prennent tes constructions : aéroports, hôpitaux, routes, usines, mines, grands chantiers…")
+    +cspdSeg("Durée des constructions",()=>{render();if(!$("#panel").hidden)renderPanel()})
+    +(n?row({i:"⚡",t:`Terminer les ${n} chantier${n>1?"s":""} en cours maintenant`,s:"Sans supplément, depuis l'éditeur",on:()=>{rushAll(true);toast("⚡ Chantiers terminés","Tout est construit");render();renderPanel()}}):"")}
+/* Dans l'éditeur */
+const _ed30=PN.editor;PN.editor=()=>{const r=_ed30();if(r)r.h=expressBlock()+r.h;return r};
+/* Dans le menu ☰ */
+const _mn30=PN.menu;PN.menu=()=>{const r=_mn30();r.h=cspdSeg("⚡ Durée des constructions",()=>{render();renderPanel()})+r.h;return r};
+/* Dans chaque ville, là où l'on construit */
+const _ct30=PN.city;PN.city=ix=>{const r=_ct30(ix);if(!r)return r;const m=CSPD[cspd()][0];
+  r.h=row({i:"⏱️",t:`Durée des constructions : ${m}`,s:cspd()===0?"Touche pour construire en 1 jour ou tout de suite":"Touche pour changer",on:()=>openP("chantiers")})+r.h;return r};
+/* Chaque page qui s'ouvre commence en haut (et non à l'endroit où l'on était dans la page précédente) */
+const _op30=openP;openP=function(t,a){_op30(t,a);try{const b=$("#pBody");if(b)b.scrollTop=0}catch(e){}};
 
 </script>
 
