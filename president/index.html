@@ -484,7 +484,7 @@ const RES_DEF={sa:"petrole",ng:"petrole",ao:"petrole",dz:"petrole",ru:"petrole",
   br:"agri",ar:"agri",ci:"agri",sn:"agri",et:"agri",cm:"agri",ht:"agri",nz:"agri",ug:"agri",mg:"agri",bi:"agri",bj:"agri",tg:"agri",pk:"agri",bd:"agri",
   ma:"tourisme",tn:"tourisme",eg:"tourisme",th:"tourisme",fr:"tourisme",it:"tourisme",es:"tourisme",pt:"tourisme",gr:"tourisme",ke:"tourisme",tz:"tourisme",tr:"tourisme",jo:"tourisme",cu:"tourisme",
   us:"tech",kr:"tech",jp:"tech",de:"tech",cn:"tech",in:"tech",gb:"tech",nl:"tech",se:"tech",sg:"tech",ch:"tech",rw:"tech",pl:"tech",vn:"tech",my:"tech",ph:"tech"};
-const UNIONS={Europe:"l'Union européenne",Afrique:"l'Union africaine",Amériques:"l'Organisation des Amériques",Asie:"la Communauté d'Asie",Eurasie:"l'Union eurasienne","Moyen-Orient":"le Conseil du Golfe",Océanie:"le Forum du Pacifique",Fictif:"l'Union régionale"};
+const UNIONS={Europe:"l'Union européenne",Afrique:"l'Union africaine",Amériques:"l'Organisation des Amériques",Asie:"la Communauté d'Asie",Eurasie:"l'Union eurasienne","Moyen-Orient":"le Conseil du Golfe",Océanie:"le Forum du Pacifique",Fictif:"l'Union régionale"};const uDe=u=>u.startsWith("le ")?"du "+u.slice(3):u.startsWith("les ")?"des "+u.slice(4):"de "+u,uA=u=>u.startsWith("le ")?"au "+u.slice(3):u.startsWith("les ")?"aux "+u.slice(4):"à "+u;
 const UNION_DEF=["fr","de","it","es","pt","be","nl","ro","pl","se","gr"];
 /* Impôts : part du PIB prélevée par chaque impôt */
 const TAXES=[["ir","👤","Impôt sur le revenu",.35,"Touche les travailleurs et les classes moyennes"],["is","🏢","Impôt sur les sociétés",.2,"Trop haut, il freine l'investissement"],["tva","🧾","TVA (taxe sur la consommation)",.35,"Pèse sur les ménages modestes et les prix"],["dou","🚢","Droits de douane",.1,"Protègent les agriculteurs, freinent le commerce"]];
@@ -620,7 +620,7 @@ function tick(){if(!S||S.over)return;S.tm++;S.month++;if(S.month>11){S.month=0;S
   /* Économie */
   const baseG=1+2.5*(1-Math.min(S.eco,1.2)*.6);const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
   const resG={petrole:(W.oil-80)/80*1.2,mines:(W.metal-100)/100*.8,tech:.4,tourisme:.3-(nWar?1:0),agri:0,aucune:0}[S.res]||0;
-  const tG=baseG+(B.infra-14)*.06+(B.education-16)*.03+nDeals*.25-nSancUs*.6+(S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0)+S.boost-(I.corr-30)/60+(mc("finances")-50)/60-(debtRatio()>1.2?.8:0)
+  const tG=baseG+(B.infra-14)*.06+(B.education-16)*.03+dealG(nDeals)-sancPen()+(S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0)+S.boost-(I.corr-30)/60+(mc("finances")-50)/60-(debtRatio()>1.2?.8:0)
     +(W.g-3)*.35+resG+(S.union?.3:0)-(T0.is-.05)*12-(T0.dou-.025)*25-(T0.ir-.09)*4-(S.cb.rate-3)*.2-nWar*.8+(ideoDef().gr||0)+(S.labG||0)+(S.eco3?orgGrowth():0)+(S.enG||0)+(S.digG||0)+(S.linkG||0)+(S.bopG||0)+(S.invG||0);
   E.g+=(tG-E.g)*.12+R(-.15,.15);S.boost*=.92;
   const tInf=infTarget();E.inf+=(tInf-E.inf)*.1+R(-.1,.1);
@@ -646,7 +646,7 @@ function tick(){if(!S||S.over)return;S.tm++;S.month++;if(S.month>11){S.month=0;S
   if(S.tm2)for(const k in T)T[k]+=S.tm2[k]||0;
   if(S.army){const w=wear();for(const k in T)T[k]-=w}
   for(const[k]of GROUPS){const t=clamp(T[k]+(S.gmod[k]||0)+(ideo[k]||0)*.5+hard+(S.mediaCtl?4:0));S.grp[k]=clamp(S.grp[k]+(t-S.grp[k])*.08+R(-.6,.6));S.gmod[k]=(S.gmod[k]||0)*.93}
-  const pop=popularity();S.me.approval=pop;S.popM*=1+(3.2-2.6*Math.min(S.eco,1)+(I.sante-50)/100-nWar*.5)/1200;
+  const pop=popularity();S.me.approval=pop;S.popM*=1+(natGrowth()-nWar*.5)/1200;
   for(const r of S.regions){const t=pop+r.mod+(r.rural?(S.grp.agri-50)*.4:(S.grp.trav-50)*.2)+(r.dev-50)*.2;r.ap=clamp(r.ap+(t-r.ap)*.1+R(-.8,.8));r.mod*=.92;r.unrest=clamp(r.unrest+(42-r.ap)/25+R(-1,1)+nWar*.3);r.dev=clamp(r.dev+(I.infra-50)/400)}
   S.opp.str=clamp(S.opp.str+((100-pop)*.85-S.opp.str)*.04+R(-1,1)-(S.laws.includes("partis")?2:0),3,95);
   /* Parlement, ministres, diplomatie */
@@ -977,7 +977,7 @@ DOSS.push(
   {id:"junte_transition",cat:"politique",cd:24,c:()=>S.regime==="junte"&&!S.transition,make:()=>({i:"🪖",title:"La communauté internationale exige une transition",text:"Tes voisins et les grandes démocraties réclament un calendrier de retour au pouvoir civil, sous peine de sanctions.",ch:[
     O("Annoncer des élections dans deux ans",()=>{S.transition=S.tm+24;fx({dip:{demo:10,all:3},grp:{arm:-4,jeun:6}});return"Le calendrier est salué. Tu pourras te présenter à l'élection."}),
     O("Prolonger la transition de cinq ans",()=>{fx({dip:{demo:-8},grp:{arm:4}});if(chance(.4)){S.sancUs[bigPartner()]=true;return"Des sanctions tombent."}return"Les protestations restent verbales."}),
-    O("Suspendre la Constitution",()=>{fx({idx:{inst:-10},dip:{all:-10},grp:{arm:6,jeun:-8}});S.union=false;return`Tu es suspendu${x("","e")} de ${UNIONS[home().bloc]||"l'union régionale"}.`})]})},
+    O("Suspendre la Constitution",()=>{fx({idx:{inst:-10},dip:{all:-10},grp:{arm:6,jeun:-8}});S.union=false;return`Tu es suspendu${x("","e")} ${uDe(UNIONS[home().bloc]||"l'union régionale")}.`})]})},
   {id:"junte_colonel",cat:"politique",c:()=>S.regime==="junte",make:()=>{const n=pname(home().ng,"H").split(" ")[1];return{i:"🎖️",title:"Un colonel trop populaire",text:`Le colonel ${esc(n)}, héros de l'armée, est acclamé dans les casernes. Certains le voient déjà à ta place.`,ch:[
     O("Le nommer ministre de la Défense",()=>{const i=S.mins.findIndex(m=>m.port==="defense");S.mins[i]=mkMin("defense",{trait:"Ambitieux",comp:RI(60,85),loy:RI(30,55),amb:RI(80,95)});S.mins[i].name="Colonel "+n;fx({grp:{arm:8}});return"Tu le gardes près de toi."}),
     O("L'envoyer comme ambassadeur à l'étranger",()=>{fx({grp:{arm:-3}});return"Le colonel part loin de la capitale."}),
@@ -1349,7 +1349,7 @@ function geoMonth(){if(!S.geo)return;const I=S.idx;const urb=S.regions.filter(r=
   if(rural&&rural.pop>.08){const mv=.0004*(1+Math.max(0,S.eco<.6?.5:0));rural.pop-=mv;const tw=urb.reduce((a,r)=>a+Math.max(1,r.dev),0);urb.forEach(r=>r.pop+=mv*Math.max(1,r.dev)/tw)}
   for(const r of urb){r.uoff=clamp((r.uoff||0)+((50-r.dev)/14-(r.uoff||0))*.01,-4,15);r.elec=clamp(r.elec+(I.infra-50)/600);r.slum=clamp(r.slum+(r.pop>.2?.03:-.01)-(I.vie-50)/800)}}
 function demo(){const I=S.idx,E=S.econ;const urb=S.regions.filter(r=>!r.rural).reduce((a,r)=>a+r.pop,0);
-  return{life:clamp(48+I.sante*.33+S.eco*6,40,86),lit:clamp(25+I.educ*.8,10,100),growth:3.2-2.6*Math.min(S.eco,1)+(I.sante-50)/100,urb:urb*100,active:S.popM*.46,jobless:S.popM*.46*E.unemp/100,youth:clamp(E.unemp*1.9,3,70)}}
+  return{life:clamp(48+I.sante*.33+S.eco*6,40,86),lit:clamp(25+I.educ*.8,10,100),growth:natGrowth(),urb:urb*100,active:S.popM*.46,jobless:S.popM*.46*E.unemp/100,youth:clamp(E.unemp*1.9,3,70)}}
 
 
 /* ---------- Monnaie, produits et exportations, entreprises, organisations, travail ----------
@@ -1812,7 +1812,7 @@ function lmJobs(){const m=S.lm,L=S.lab,L0=S.lab0,E=S.econ;const smr=L.smig/L.avg
   return{A,ind,I,P,Sv,C,T,shock:m.shock,total:Math.max(0,A+I+P+Sv+C+T+m.shock)}}
 function lmRate(){const LF=lmLF(),J=lmJobs();return clamp((LF-J.total)/LF*100+(lmFric()-S.lm.fr0),1.5,60)}
 function laborMonth(){const m=S.lm,E=S.econ,L=S.lab;if(m.vis0===1&&typeof visitors==="function")m.vis0=Math.max(.05,visitors());
-  m.retireK=clamp((L.retire-S.lab0.retire)*-.006,-.05,.08);m.pf=clamp(m.pf+(.002*m.creche)+(S.laws.includes("parite")?.0005:0),.2,.85);m.shock*=.97;m.rg=(m.rg||1)*(1+E.g/1200);m.pi=(m.pi||1)*(1+(1.1+1.1*Math.min(S.eco,1.2))/1200);
+  m.retireK=clamp((L.retire-S.lab0.retire)*-.006,-.05,.08);m.pf=clamp(m.pf+(.002*m.creche)+(S.laws.includes("parite")?.0005:0),.2,.85);m.shock*=.97;m.rg=(m.rg||1)*(1+E.g/1200);m.pi=(m.pi||1)*(1+prodTrend()/1200);
   const J=lmJobs();const u=lmRate();E.unemp=clamp(E.unemp+(u-E.unemp)*.25+R(-.08,.08),1.5,60);m.u=u;
   const cur={A:J.A,P:J.P,Sv:J.Sv,C:J.C,T:J.T,...J.ind};if(m.prev){let c=0,d=0;for(const k in cur){const dv=cur[k]-(m.prev[k]||0);if(dv>0)c+=dv;else d-=dv}m.flows={c,d}}m.prev=cur;
   m.wnom=L.avg;m.wreal=m.wreal*(1+(E.g/100+E.inf/100)/12)/(1+E.inf/1200);
@@ -1904,7 +1904,7 @@ function initHealth(s){const keep=S;S=s;const I=s.idx,eco=s.eco;const doc=clamp(
 function waterAvg(){const c=S.regions.filter(r=>!r.rural);const p=c.reduce((a,r)=>a+r.pop,0)||1;return c.reduce((a,r)=>a+(r.water2||50)*r.pop,0)/p*.75+20}
 function hlScore(){const h=S.hl;const epi=Object.values(S.epi||{}).reduce((a,v)=>a+v,0)/20;return clamp(20+Math.min(h.doc,4)*9+Math.min(h.nur,10)*1.2+Math.min(h.beds,6)*3+h.vacc*.18+waterAvg()*.12-(typeof hunger==="function"&&S.food?hunger()*.4:0)-epi+(h.meds?4:0)+(h.mat?2:0)+(S.laws.includes("cmu")?5:0)+(S.hl.off||0),5,100)}
 function infantMort(){const h=S.hl;return clamp(130-h.vacc*.6-waterAvg()*.35-Math.min(h.doc,4)*8-(h.mat?10:0)-S.eco*15,2,140)}
-function hlMonth(){const h=S.hl;const dil=1-(3.2-2.6*Math.min(S.eco,1))/1200;const drain=typeof emigRate==="function"&&S.dias?(typeof citizenEmig==="function"?citizenEmig():emigRate())*.0008:0;
+function hlMonth(){const h=S.hl;const dil=1-natBase()/1200;const drain=typeof emigRate==="function"&&S.dias?(typeof citizenEmig==="function"?citizenEmig():emigRate())*.0008:0;
   h.doc=Math.max(.01,h.doc*dil*(1-drain)+(S.prog.medecins||0)*.002+(S.bud.sante-15)*.00025*Math.max(.3,h.doc));h.nur=Math.max(.05,h.nur*dil+(S.bud.sante-15)*.0006*Math.max(.3,h.nur/3));
   h.beds=Math.max(.1,h.beds*(1-.0006)*dil+(S.bud.sante-15)*.0003);h.vacc=clamp(h.vacc+((45+S.idx.sante*.35+(S.prog.vaccin?10:0))-h.vacc)*.02,5,99);
   S.idx.sante=clamp(S.idx.sante+(hlScore()-S.idx.sante)*.03)}
@@ -1942,7 +1942,7 @@ function hsLvl(){return S.mon?S.mon.lvl:1}
 function hsUnitCost(){return 9000*hsLvl()+S.lab.avg*54}          /* € par logement neuf */
 function hsWY(){return clamp(3.2-2*Math.min(S.eco,1),1.2,3.2)}       /* années de travail pour bâtir un logement */
 /* Croissance annuelle du nombre de ménages en ville : naissances + exode rural */
-function hsDemandG(){const nat=(3.2-2.6*Math.min(S.eco,1)+(S.idx.sante-50)/100)/100;const ru=S.regions.find(r=>r.rural);const urb=S.regions.filter(r=>!r.rural).reduce((a,r)=>a+r.pop,0)||1;
+function hsDemandG(){const nat=natGrowth()/100;const ru=S.regions.find(r=>r.rural);const urb=S.regions.filter(r=>!r.rural).reduce((a,r)=>a+r.pop,0)||1;
   return Math.max(0,nat)+(ru&&ru.pop>.08?.0048*(S.eco<.6?1.5:1)/urb:0)}
 function hsCover(){return clamp(.88+.14*Math.min(S.eco,1),.88,1.02)}
 /* Ce qui pousse ou freine les promoteurs privés */
@@ -2324,11 +2324,11 @@ function lawAdopt(l,how){if(l.auth&&isDemo()&&chance(S.idx.inst/120)){fx({idx:{i
 function refSupport(l){const g=l.g||{};let s=50+(popularity()-50)*.45;for(const[k,,,w]of GROUPS)s+=(g[k]||0)*w*1.6;return clamp(s,5,95)}
 function lawRef(l){pay(S.econ.gdp*.0004,"organisation du référendum");S.pendingLaw={k:l.k,m:S.tm+2,lobby:0,deals:{},ref:true};log(`🗳️ Référendum convoqué sur « ${l.n} » dans deux mois.`);news(`🗳️ Les électeurs voteront sur « ${l.n} »`)}
 /* Passer en force */
-function lawForce(l){if(isDemo()){fx({all:-4,idx:{inst:-3}});S.opp.str=clamp(S.opp.str+6,3,95);S.seats.allies=clamp(S.seats.allies-2,5,95);if(chance(.35))queueDossier("censure")}else fx({idx:{inst:-2}});
+function lawForce(l){if(isDemo()){fx({all:-4,idx:{inst:-3}});S.opp.str=clamp(S.opp.str+6,3,95);S.seats.allies=clamp(S.seats.allies-2,5,95);if(chance(.35))queueDossier("censure_loi")}else fx({idx:{inst:-2}});
   if(S.pendingLaw&&S.pendingLaw.k===l.k)S.pendingLaw=null;return lawAdopt(l,isDemo()?"sans vote, par la procédure d'urgence":"par décret")}
 function lawDeal(p){const pl=S.pendingLaw;if(!pl)return null;pl.deals=pl.deals||{};if(pl.deals[p.n])return null;const d=partyDemand(p);d[1]();pl.deals[p.n]=1;log(`🤝 Accord avec ${p.n} pour voter « ${(LAWS.find(q=>q.k===pl.k)||{}).n} », en échange de : ${d[0]}.`);return d[0]}
 const _propL=proposeLaw;proposeLaw=function(l){_propL(l);S.pendingLaw.deals={}};
-DOSS.push({id:"censure",cat:"politique",cd:24,c:()=>false,make:()=>({i:"⚖️",title:"Motion de censure",why:"Tu as fait passer une loi sans vote",text:`L'opposition, menée par ${esc(S.opp.name)}, dépose une motion de censure contre le gouvernement. Plusieurs députés de ta majorité hésitent.`,ch:[
+DOSS.push({id:"censure_loi",cat:"politique",cd:24,c:()=>false,make:()=>({i:"⚖️",title:"Motion de censure",why:"Tu as fait passer une loi sans vote",text:`L'opposition, menée par ${esc(S.opp.name)}, dépose une motion de censure contre le gouvernement. Plusieurs députés de ta majorité hésitent.`,ch:[
   O("Remanier le gouvernement pour calmer la majorité",()=>{S.mins.forEach(m=>m.loy=clamp(m.loy+6));fx({seats:2});return"Le remaniement ressoude ta majorité : la motion échoue."}),
   O("Dissoudre le Parlement et convoquer des élections",()=>{const t=clamp(popularity()+R(-8,8),15,85);S.seats.allies=t;syncParties();fx({idx:{inst:1}});log(`🗳️ Législatives anticipées : ta majorité obtient ${Math.round(t)} % des sièges.`,"Dissolution");news(`🗳️ Législatives anticipées : ${Math.round(t)} % des sièges pour la majorité`);return t>=50?`Les électeurs te donnent une majorité (${Math.round(t)} % des sièges).`:`Tu perds ta majorité (${Math.round(t)} % des sièges).`}),
   O("Laisser voter",()=>chance(.6)?(fx({all:-2}),"La motion échoue de peu."):(S.mins.forEach(m=>m.loy=clamp(m.loy-10)),S.opp.str=clamp(S.opp.str+8,3,95),fx({all:-5}),"La motion est adoptée : le gouvernement doit démissionner et être reformé. Ton autorité en sort affaiblie."))]})});
@@ -2433,7 +2433,7 @@ DOSS.push({id:"zone_perdue",cat:"crise",cd:12,c:()=>false,make:()=>{const g=(S.r
 const _nsR=newState;newState=function(o){const s=_nsR(o);s.reb=[];s.rebN=0;const c=country(s.cid);
   if(!c.fict&&c.safe<=.45&&c.eco<.45&&chance(.6)){const keep=S;S=s;try{const ix=RI(1,Math.max(1,s.regions.filter(r=>!r.rural).length-1));const g=rebSpawn(ix,pick(["sep","gue","jih"]),R(2,5),R(15,35));if(g)g.tm=0}finally{S=keep}}return s};
 /* ---------- Nations unies : voter les résolutions ---------- */
-DOSS.push({id:"onu",cat:"diplo",cd:10,c:()=>(S.aiw||[]).length>0,make:()=>{const w=pick(S.aiw);const A=country(w.a),B=country(w.b);
+DOSS.push({id:"onu_guerre",cat:"diplo",cd:10,c:()=>(S.aiw||[]).length>0,make:()=>{const w=pick(S.aiw);const A=country(w.a),B=country(w.b);
   return{i:"🇺🇳",title:`Nations unies · Résolution sur la guerre entre ${art(A)} et ${art(B)}`,text:`Une résolution condamne ${art(A)} pour son attaque contre ${art(B)} et réclame un cessez-le-feu. Ton ambassadeur attend tes instructions.`,ch:[
     O("Voter pour",()=>{fx({dip:{[w.a]:-8,[w.b]:6}});for(const k in S.dip)if(REG[country(k).reg].demo)S.dip[k]=clamp(S.dip[k]+1);if(chance(.25)){w.f=clamp(w.f-10)}return`Tu condamnes ${art(A)}. ${cap(art(B))} te remercie.`}),
     O("S'abstenir",()=>{fx({dip:{[w.b]:-2}});return"Ton pays reste neutre."}),
@@ -2815,7 +2815,7 @@ TAB.monde=()=>{const ids=Object.keys(S.dip).sort((a,b)=>S.dip[b]-S.dip[a]);const
   if(atWar())h+=card("⚔️ Conflits en cours",Object.keys(S.wars).map(k=>{const w=S.wars[k],c=country(k);return row({i:c.f,t:`Guerre contre ${c.n}`,s:`${w.m} mois · ${w.front>=60?"tu avances":w.front<=40?"tu recules":"front figé"} · coût ${md(S.econ.gdp*.004)} / mois`,bar:w.front,r:Math.round(w.front)+" %",on:()=>openP("war",k)})}).join("")+note("La barre montre le rapport de force : à 90 %, victoire ; à 10 %, défaite."));
   h+=card("Économie mondiale",kv([["Croissance mondiale",pc(W.g),W.g<1.5?"neg":""],["Prix du pétrole",nf(W.oil)+" $ le baril"],["Prix des métaux",`indice ${nf(W.metal)}`]])+
     note(S.res==="petrole"?`Ton pays vit du pétrole : chaque hausse du baril remplit tes caisses (${md(resRevY())} par an actuellement).`:S.res==="mines"?`Tes mines rapportent ${md(resRevY())} par an au prix actuel des métaux.`:"Ton pays importe son énergie : un pétrole cher fait monter l'inflation."));
-  h+=card("Organisations internationales",row({i:S.union?"🟢":"⚪",t:cap(u),s:S.union?"Membre : marché commun (+ croissance), mais règles budgétaires":"Non membre",on:()=>confirmM("🤝",S.union?`Quitter ${u} ?`:`Demander l'adhésion à ${u} ?`,S.union?"Tu retrouves ta souveraineté, mais tu perds l'accès au marché commun.":S.idx.inst<45?"Ton État de droit est trop faible : la demande sera probablement refusée.":"Ta demande sera examinée par les pays membres.",S.union?"Quitter":"Demander",()=>{if(S.union){S.union=false;fx({boost:-.6,grp:{entr:-6,arm:3},dip:{all:-4}});log(`🚪 Ton pays quitte ${u}.`);return`Ton pays quitte ${u}.`}if(chance(S.idx.inst/100)){S.union=true;fx({dip:{all:3},grp:{entr:6},boost:.4});log(`🤝 Ton pays rejoint ${u}.`);return`Ton pays rejoint ${u} !`}fx({dip:{all:-1}});return"Ta demande est refusée pour l'instant."})})
+  h+=card("Organisations internationales",row({i:S.union?"🟢":"⚪",t:cap(u),s:S.union?"Membre : marché commun (+ croissance), mais règles budgétaires":"Non membre",on:()=>confirmM("🤝",S.union?`Quitter ${u} ?`:`Demander l'adhésion ${uA(u)} ?`,S.union?"Tu retrouves ta souveraineté, mais tu perds l'accès au marché commun.":S.idx.inst<45?"Ton État de droit est trop faible : la demande sera probablement refusée.":"Ta demande sera examinée par les pays membres.",S.union?"Quitter":"Demander",()=>{if(S.union){S.union=false;fx({boost:-.6,grp:{entr:-6,arm:3},dip:{all:-4}});log(`🚪 Ton pays quitte ${u}.`);return`Ton pays quitte ${u}.`}if(chance(S.idx.inst/100)){S.union=true;fx({dip:{all:3},grp:{entr:6},boost:.4});log(`🤝 Ton pays rejoint ${u}.`);return`Ton pays rejoint ${u} !`}fx({dip:{all:-1}});return"Ta demande est refusée pour l'instant."})})
     +`<div class="head">🇺🇳 Nations unies : ton pays est membre. Les votes arrivent sous forme de dossiers.</div>`);
   h+=card("Relations internationales",ids.map(k=>{const c=country(k);return row({i:c.f,t:c.n,s:`${esc(S.leaders[k].n)}${S.wars[k]?" · ⚔️ en guerre":""}${S.deals[k]?" · accord commercial":""}${S.allies[k]?" · alliance":""}${S.sanc[k]?" · tu le sanctionnes":""}${S.sancUs[k]?" · ⚠️ te sanctionne":""}`,bar:S.dip[k],r:Math.round(S.dip[k]),on:()=>openP("pays",k)})}).join(""));
   return h};
@@ -3549,7 +3549,7 @@ const _help8=PN.help;PN.help=()=>{const r=_help8();r.h=row({i:"🧭",t:"Revoir l
 PN.rename=()=>{const c=home(),f=ui.f;f.art=f.art??(S.cname?S.cname.a:c.a);const urb=S.regions.map((r,ix)=>({r,ix})).filter(o=>!o.r.rural);
   return{t:"✏️ Renommer",h:note("C'est ta partie : donne au pays, à ses villes et à ton parti les noms que tu veux.")
     +`<div class="field"><label for="rnC">Nom du pays</label><input id="rnC" value="${esc(c.n)}" autocomplete="off"></div>
-    <div class="field"><label>Article</label><div class="segw">${[["la","la"],["le","le"],["les","les"],["l'","l'"],["","aucun"]].map(([v,l])=>`<button type="button" class="${f.art===v?"on":""}" data-h="${hb(()=>{f.art=v;renderPanel()})}">${l}</button>`).join("")}</div><small class="hint">Pour écrire « ${f.art===""?"à Madagascar":f.art==="l'"?"de l'Ouganda":"de "+f.art+" …"} »</small></div>
+    <div class="field"><label>Article</label><div class="segw">${[["la","la"],["le","le"],["les","les"],["l'","l'"],["","aucun"]].map(([v,l])=>`<button type="button" class="${f.art===v?"on":""}" data-h="${hb(()=>{f.art=v;renderPanel()})}">${l}</button>`).join("")}</div><small class="hint">On écrira : ${({la:"« de la … », « en … »",le:"« du … », « au … »",les:"« des … », « aux … »","l'":"« de l'… », « en … »","":"« de … », « à … »"})[f.art]||""}</small></div>
     <div class="field"><label for="rnP">Nom de ton parti</label><input id="rnP" value="${esc(S.me.party)}" autocomplete="off"></div>`
     +sec("Villes")+urb.map(({r,ix})=>`<div class="field"><label for="rnV${ix}">${ix===capIx()?"Capitale":"Ville"}</label><input id="rnV${ix}" value="${esc(r.city)}" autocomplete="off"></div>`).join("")
     +`<div class="actions"><button type="button" class="btn go" data-h="${hb(()=>{const n=($("#rnC").value||"").trim().slice(0,40);if(n&&(n!==c.n||f.art!==c.a)){const old=c.n;S.cname={n,a:f.art};applyNames();log(`✏️ Le pays s'appelle désormais ${n}.`);news(`✏️ ${old} devient officiellement ${n}`)}
@@ -4458,7 +4458,7 @@ const PJX={tgv:()=>{S.roads.filter(q=>q.lvl>=2).sort((a,b)=>b.km-a.km).slice(0,2
 function projMonth(){for(const d of S.done||[])if(PJX[d.k]&&!d.x19){d.x19=1;try{PJX[d.k]()}catch(e){}}}
 
 /* ===== 11. Diplomatie : le grand sommet annuel ===== */
-DOSS.push({id:"sommet",cat:"diplo",cd:12,c:()=>S.month===8,make:()=>{const rk=rankRows("gdp").pos;const G=rk<=20;
+DOSS.push({id:"sommet_g",cat:"diplo",cd:12,c:()=>S.month===8,make:()=>{const rk=rankRows("gdp").pos;const G=rk<=20;
   return{i:"🌐",title:G?"Sommet des vingt grandes économies":"Sommet de ton continent",text:`Les chefs d'État se réunissent. ${G?`Ton pays (${rk}e économie mondiale) est invité à la table des grands.`:"Les pays de ta région débattent de l'avenir du continent."} Quelle ligne défends-tu ?`,ch:[
     O("Le commerce libre",()=>{for(const k in S.dip)if(country(k).eco>.7)S.dip[k]=clamp(S.dip[k]+3);fx({grp:{entr:4,agri:-2},boost:.2});return"Tu plaides pour ouvrir les marchés : les pays riches applaudissent."}),
     O("Le climat",()=>{for(const k in S.dip)if(REG[country(k).reg].demo)S.dip[k]=clamp(S.dip[k]+3);fx({grp:{jeun:4},idx:{envi:1}});return"Ton discours sur le climat est remarqué."}),
@@ -4620,11 +4620,11 @@ function pppCostM(){return(S.ppp||[]).filter(x=>x.pay&&x.pay.left>0).reduce((a,x
 
 /* ===== 6. Pays : population et natalité ===== */
 function demoParts(){const kids=typeof children==="function"?children():S.popM*.3,old=S.pen?penRet():S.popM*.1;return{kids,old,mid:Math.max(0,S.popM-kids-old)}}
-function fertility(){return clamp(1.3+(3.2-2.6*Math.min(S.eco,1))*1.15+(S.natal&&S.natal.prime?.15:0)-(S.natal&&S.natal.plan?.4:0)+(S.natal&&S.natal.conge?.1:0),1,7)}
+function fertility(){return clamp(1.55+natBase()*1.3+(S.natal&&S.natal.prime?.15:0)-(S.natal&&S.natal.plan?.4:0)+(S.natal&&S.natal.conge?.1:0),1,7)}
 const _lk20=linksMonth;linksMonth=function(){_lk20();advMonth();goalsMonth();pppMonth();const N=S.natal;if(N){const b=(N.prime?.12:0)+(N.conge?.08:0)-(N.plan?.25:0);S.popM*=1+b/1200;if(N.plan&&S.lm)S.lm.pf=clamp(S.lm.pf+.0004,.2,.85);if(N.conge&&S.lm)S.lm.pf=clamp(S.lm.pf-.0002,.2,.85)}};
 PN.demog=()=>{const D=demoParts(),N=S.natal||(S.natal={});const T=S.popM;const bar=(n,v,c)=>`<div class="pyr"><span>${n}</span><span class="pb"><i style="width:${Math.round(v/T*100*2)}%;background:${c}"></i></span><b>${nJobs(v)} · ${Math.round(v/T*100)} %</b></div>`;
   let h=bar("65 ans et plus",D.old,"#7a5aa8")+bar("15 – 64 ans",D.mid,"#2a9aa8")+bar("Moins de 15 ans",D.kids,"#e0a020")
-    +kv([["Enfants par femme",nf(fertility(),1)],["Croissance de la population",pc(3.2-2.6*Math.min(S.eco,1)+(S.idx.sante-50)/100)+" par an"],["Espérance de vie",`${nf(demo().life)} ans`],["Immigrés",S.mig?pc(S.mig.sh*100):"—"]])
+    +kv([["Enfants par femme",nf(fertility(),1)],["Croissance de la population",pc(natGrowth())+" par an"],["Espérance de vie",`${nf(demo().life)} ans`],["Immigrés",S.mig?pc(S.mig.sh*100):"—"]])
     +note("Un pays jeune a beaucoup de bras mais doit créer des écoles et des emplois ; un pays vieux manque de travailleurs et paie beaucoup de retraites.");
   h+=sec("Politique familiale")+tgl(!!N.prime,"👶","Prime à la naissance",`${md(S.econ.gdp*.001)} par an · plus de naissances`,()=>{N.prime=!N.prime;if(N.prime)fx({grp:{trav:3}})})
     +tgl(!!N.conge,"🍼","Congé parental long et bien payé",`${md(S.econ.gdp*.0012)} par an · familles soutenues, un peu moins de femmes au travail`,()=>{N.conge=!N.conge;if(N.conge)fx({grp:{trav:3,jeun:2}})})
@@ -6196,8 +6196,8 @@ PN.hh=k=>{const x=HH.find(q=>q.k===k)||HH[0];const r=hhCalc(x);const W=hhWhy(x,r
 const goT=(t)=>()=>{closeP();ui.tab=t;render()},opP=(p,a)=>()=>openP(p,a);
 function growthTerms(){const B=S.bud,I=S.idx,W=S.world,T0=S.tx;const baseG=1+2.5*(1-Math.min(S.eco,1.2)*.6);const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
   const resG={petrole:(W.oil-80)/80*1.2,mines:(W.metal-100)/100*.8,tech:.4,tourisme:.3-(nWar?1:0),agri:0,aucune:0}[S.res]||0;
-  return[["🌱","Potentiel de rattrapage du pays",baseG,null],["🛣️","Budget des infrastructures",(B.infra-14)*.06,opP("repart")],["🎓","Budget de l'éducation",(B.education-16)*.03,opP("repart")],["🤝","Accords commerciaux",nDeals*.25,goT("monde")],
-    ["🚫","Sanctions contre ton pays",-nSancUs*.6,goT("monde")],["💸","Politique budgétaire",S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0,opP("fiscal")],["🚀","Réformes et investissements récents",S.boost,null],
+  return[["🌱","Potentiel de rattrapage du pays",baseG,null],["🛣️","Budget des infrastructures",(B.infra-14)*.06,opP("repart")],["🎓","Budget de l'éducation",(B.education-16)*.03,opP("repart")],["🤝","Accords commerciaux",dealG(nDeals),goT("monde")],
+    ["🚫","Sanctions contre ton pays",-sancPen(),goT("monde")],["💸","Politique budgétaire",S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0,opP("fiscal")],["🚀","Réformes et investissements récents",S.boost,null],
     ["🕳️","Corruption",-(I.corr-30)/60,opP("crime")],["👔","Compétence du ministre des Finances",(mc("finances")-50)/60,goT("conseil")],["🏦","Dette très élevée",debtRatio()>1.2?-.8:0,opP("dette")],["🌍","Économie mondiale",(W.g-3)*.35,goT("monde")],
     ["⛏️","Prix des matières premières",resG,opP("res2")],["🇺🇳","Union économique",S.union?.3:0,null],["🏢","Impôt sur les sociétés",-(T0.is-.05)*12,opP("taxes")],["🛃","Droits de douane",-(T0.dou-.025)*25,opP("taxes")],
     ["🧾","Impôt sur le revenu",-(T0.ir-.09)*4,opP("taxes")],["🏦","Taux directeur",-(S.cb.rate-3)*.2,opP("cbank")],["⚔️","Guerres",-nWar*.8,goT("monde")],["🧭","Idéologie du gouvernement",(ideoDef().gr||0),null],
@@ -6460,6 +6460,75 @@ const _ct30=PN.city;PN.city=ix=>{const r=_ct30(ix);if(!r)return r;const m=CSPD[c
   r.h=row({i:"⏱️",t:`Durée des constructions : ${m}`,s:cspd()===0?"Touche pour construire en 1 jour ou tout de suite":"Touche pour changer",on:()=>openP("chantiers")})+r.h;return r};
 /* Chaque page qui s'ouvre commence en haut (et non à l'endroit où l'on était dans la page précédente) */
 const _op30=openP;openP=function(t,a){_op30(t,a);try{const b=$("#pBody");if(b)b.scrollTop=0}catch(e){}};
+
+/* ===== v31 — Corrections après l'analyse : sanctions plafonnées, relations qui se réparent, négociation ===== */
+/* Poids d'un pays qui te sanctionne : un grand marché pèse beaucoup plus qu'un petit pays. */
+function sancW(k){const c=country(k);return c?Math.min(2,Math.sqrt((c.gdp||10)/2000)):.1}
+function sancList(){return Object.keys(S.sancUs||{}).filter(k=>S.sancUs[k])}
+function sancPenW(W){return 4*(1-Math.exp(-W/4))}
+/* Effet des sanctions sur la croissance : rendements décroissants, jamais plus de 4 points. */
+function sancPen(skip){return sancPenW(sancList().filter(k=>k!==skip).reduce((a,k)=>a+sancW(k),0))}
+/* Accords commerciaux : chaque nouvel accord rapporte un peu moins que le précédent (2,5 points au maximum). */
+function dealG(n){return 2.5*(1-Math.exp(-n/10))}
+const aggrWar=()=>Object.values(S.wars||{}).some(w=>w.by==="me");
+/* Relation « naturelle » vers laquelle chaque pays revient avec le temps. */
+function dipBase(k){const c=country(k);const b=S.dip0&&S.dip0[k]!=null?S.dip0[k]:50;const demo=c&&REG[c.reg]&&REG[c.reg].demo;
+  return clamp(b-(demo?Math.max(0,(S.inst0??S.idx.inst)-S.idx.inst)*.4:0)+(S.allies&&S.allies[k]?8:0))}
+/* Les rancunes s'effacent lentement (≈ 2 ans pour moitié), les amitiés s'entretiennent (≈ 7 ans pour moitié). */
+function dipHeal(){for(const k in S.dip){if(S.wars[k]||S.sanc[k])continue;const d=dipBase(k)-S.dip[k];S.dip[k]=clamp(S.dip[k]+(d>0?d*.025:d*.008))}}
+function sancLift(id,why){const c=country(id);S.sancUs[id]=false;if(S.sancT)delete S.sancT[id];news(`✅ ${cap(art(c))} lève ses sanctions`);log(`✅ ${cap(art(c))} lève ses sanctions contre ton pays.`,why);toast(`✅ ${cap(art(c))} lève ses sanctions`,"")}
+aiReact=function(){dipHeal();S.sancT=S.sancT||{};const agg=aggrWar();
+  for(const k of Object.keys(S.sancT))if(!S.sancUs[k])delete S.sancT[k];
+  for(const id in S.dip){const r=S.dip[id],c=country(id);
+    if(S.sancUs[id]&&S.sancT[id]==null)S.sancT[id]=S.tm;
+    if(r<15&&!S.sancUs[id]&&!S.wars[id]&&chance(.006+sancW(id)*.006)){S.sancUs[id]=true;S.sancT[id]=S.tm;log(`🚫 ${cap(art(c))} t'impose des sanctions.`,"Relations très mauvaises");toast(`🚫 Sanctions ${du(c)}`,"Améliore vos relations pour les faire lever")}
+    else if(S.sancUs[id]&&!S.wars[id]&&!(agg&&REG[c.reg].demo)){const dur=S.tm-S.sancT[id];const p=r>45?.05:r>=35?.03:r>=25?.008+Math.min(.02,dur/2400):0;if(p&&chance(p))sancLift(id,"Relations apaisées")}
+    if(r>78&&!S.allies[id]&&!S.wars[id]&&chance(.006))S.allyOffer=id}
+  if(S.allyOffer)queueDossier("offre_alliance")};
+/* Négocier la levée des sanctions depuis la fiche du pays */
+function negoP(id,conc){const c=country(id);return clamp(.12+(S.dip[id]-15)/120+(mc("etrangeres")-50)/200+(S.idx.inst-50)/250+(conc?.25:0)-(aggrWar()&&REG[c.reg].demo?.3:0)-sancW(id)*.04,.03,.85)}
+const _pays31=PN.pays;PN.pays=id=>{const r=_pays31(id);if(!r||!S.sancUs||!S.sancUs[id]||S.wars[id])return r;const c=country(id);
+  const since=S.sancT&&S.sancT[id]!=null?S.tm-S.sancT[id]:0,w=sancW(id),cost=S.econ.gdp*.002,p=negoP(id,false),p2=negoP(id,true);
+  const ok=()=>{sancLift(id,"Négociation réussie");fx({dip:{[id]:5}})};
+  r.h=card(`🚫 ${cap(art(c))} sanctionne ton pays`,kv([["Depuis",since>0?`${since} mois`:"ce mois-ci"],["Poids de ce pays",w>=1?"très lourd (grand marché)":w>=.5?"important":w>=.2?"moyen":"faible"],["Ce que ça te coûte",`≈ −${nf(sancPen()-sancPen(id),2)} point de croissance`,"neg"]])
+    +note("Les sanctions se lèvent d'elles-mêmes quand la relation remonte au-dessus de 35. Tu peux aussi négocier dès maintenant.")
+    +dipAct("🤝","Négocier la levée des sanctions",`Chance ≈ ${Math.round(p*100)} % · en cas d'échec : relation −2`,()=>{if(chance(p)){ok();toast("🤝 Accord trouvé","Les sanctions sont levées")}else{fx({dip:{[id]:-2}});toast("🤝 Pas d'accord","Ils exigent davantage")}})
+    +dipAct("📜","Négocier avec des concessions",`Chance ≈ ${Math.round(p2*100)} % · ${md(cost)} de compensations et des réformes`,()=>{pay(cost,"compensations pour lever des sanctions");fx({idx:{inst:2},grp:{arm:-2}});if(chance(p2)){ok();toast("📜 Accord trouvé","Les sanctions sont levées")}else{fx({dip:{[id]:3}});toast("📜 Pas encore d'accord","Tes concessions améliorent la relation")}}))+r.h;return r};
+/* Résumé dans l'onglet Monde */
+const _mo31=TAB.monde;TAB.monde=()=>{const h=_mo31();const L=sancList();if(!L.length)return h;
+  return card(`🚫 ${L.length} pays sanctionne${L.length>1?"nt":""} ton pays`,note(`Coût total ≈ −${nf(sancPen(),1)} point${sancPen()>=2?"s":""} de croissance. Plus un pays est grand, plus ses sanctions pèsent. Ouvre un pays pour négocier.`)
+    +L.sort((a,b)=>sancW(b)-sancW(a)).slice(0,8).map(k=>{const c=country(k),m=S.sancT&&S.sancT[k]!=null?S.tm-S.sancT[k]:0;return row({i:c.f,t:c.n,s:`depuis ${m} mois · relation ${Math.round(S.dip[k])}`,bar:S.dip[k],on:()=>openP("pays",k)})}).join("")
+    +(L.length>8?note(`… et ${L.length-8} autre${L.length-8>1?"s":""}.`):""))+h};
+/* Point de départ des relations, pour les nouvelles parties et les anciennes sauvegardes */
+function dip0Of(s){const o={};const me=REG[s.regime]||{};const hb=country(s.cid)?.bloc;for(const k in s.dip){const c=country(k);o[k]=clamp(50+(c&&c.bloc===hb?10:0)-(!me.demo&&c&&REG[c.reg].demo?8:0))}return o}
+const _ns31=newState;newState=function(){const s=_ns31.apply(this,arguments);s.dip0={...s.dip};s.inst0=s.idx.inst;s.sancT={};for(const k in s.sancUs)if(s.sancUs[k])s.sancT[k]=0;return s};
+const _mg31=migrate;migrate=function(s){_mg31(s);if(!s.dip0)s.dip0=dip0Of(s);if(s.inst0==null)s.inst0=s.idx.inst;if(!s.sancT){s.sancT={};for(const k in s.sancUs)if(s.sancUs[k])s.sancT[k]=s.tm}for(const k in s.dip)if(s.dip0[k]==null)s.dip0[k]=s.dip[k];return s};
+/* Accroissement naturel réel (naissances − décès, % par an, ordres de grandeur récents) */
+const NATG={fr:.1,de:-.4,it:-.5,es:-.2,pt:-.4,gb:.1,be:0,nl:0,ch:.1,ro:-.6,ru:-.4,tr:.7,us:.3,ca:.1,mx:.8,br:.5,ar:.4,ht:1.5,cn:-.1,jp:-.6,kr:-.2,in:.8,id:.8,th:0,au:.4,sa:1.2,eg:1.6,ma:1,dz:1.6,tn:.7,sn:2.6,ml:3.1,ci:2.5,ng:2.4,cm:2.6,ga:2,cg:2.4,cd:3.2,ao:3.1,rw:2.2,ke:2,et:2.5,za:.9,
+  pl:-.3,se:0,no:.2,gr:-.6,ae:.9,qa:1,jo:1.5,kz:1.3,pk:2,bd:1.1,vn:.7,ph:1.4,my:.9,sg:.2,nz:.3,co:.6,cl:.2,pe:.9,ve:1.2,cu:-.3,bj:2.7,bf:2.6,ne:3.6,td:3.1,gn:2.6,tg:2.3,gh:1.9,tz:2.9,ug:3,mg:2.4,bi:2.7,cf:2.8,mr:2.6,kp:.3,er:1.7,sd:2.6,ua:-1};
+/* Base du pays, qui baisse quand le pays se développe (transition démographique) */
+function natBase(){const b=NATG[S.cid]??(3.2-2.6*Math.min(S.eco,1));return b-Math.max(0,S.eco-(S.eco0??S.eco))*2}
+/* Avec l'effet de la santé (seule la différence depuis le début compte) */
+function natGrowth(){return natBase()+(S.idx.sante-(S.sante0??S.idx.sante))/100}
+const _ns31b=newState;newState=function(){const s=_ns31b.apply(this,arguments);s.eco0=s.eco;s.sante0=s.idx.sante;return s};
+const _mg31b=migrate;migrate=function(s){_mg31b(s);if(s.eco0==null)s.eco0=s.eco;if(s.sante0==null)s.sante0=s.idx.sante;return s};
+/* Gains de productivité : calés au départ sur la croissance et la démographie du pays,
+   pour que le chômage ne dérive pas tout seul quand on ne fait rien. Ensuite, seules tes décisions le font bouger. */
+function popGrowthNow(){let g=natGrowth();try{if(typeof migRate==="function"){const r=migRate();g+=r.reg+r.irr+r.ref}if(typeof emigRate==="function")g-=emigRate()}catch(e){}return g}
+function prodTrend(){const m=S.lm;if(m.pT==null){let g=2;try{g=growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){}m.pT=clamp(g-.88*popGrowthNow(),.3,4)}return m.pT}
+/* Garde-fous du marché du travail : quand le chômage tombe très bas, les salaires montent et les embauches ralentissent ;
+   quand il explose, les salaires baissent et les embauches repartent. Entre les deux, rien ne bouge : tes décisions comptent. */
+const _lj31=lmJobs;lmJobs=function(){const J=_lj31();const a=S.lm&&S.lm.wadj||0;const W=a*J.Sv;J.W=W;J.total=Math.max(0,J.total+W);return J};
+const _lb31=laborMonth;laborMonth=function(){_lb31();const m=S.lm;if(!m)return;const u=S.econ.unemp,u0=S.why0?S.why0.u:u;const lo=Math.max(2.5,u0*.6),hi=u0+8;
+  m.wadj=m.wadj||0;if(u<lo)m.wadj-=(lo-u)*.004;else if(u>hi)m.wadj+=(u-hi)*.003;else m.wadj*=.98;m.wadj=clamp(m.wadj,-.15,.12)};
+const _ut31=unempTerms;unempTerms=function(){const T=_ut31();if(!S.why0||!S.lm)return T;const LF=lmLF(),J=lmJobs();const add=[];
+  if(Math.abs(J.H||0)/LF*100>=.02)add.push(["🏠",`Bâtiment et logement : ${J.H>0?"créés":"perdus"}`,-(J.H||0)/LF*100,opP("housing")]);
+  const sh=(J.shock||0)-((S.why0.J&&S.why0.J.shock)||0);if(Math.abs(sh)/LF*100>=.02)add.push(["⚡",sh<0?"Chocs récents : fermetures, crises":"Rebond après un choc",-sh/LF*100,goT("travail")]);
+  if(Math.abs(J.W||0)/LF*100>=.02)add.push(["💶",J.W<0?"Pénurie de main-d'œuvre : embauches freinées":"Baisse des salaires : embauches relancées",-J.W/LF*100,goT("travail")]);
+  const i=T.findIndex(t=>t[0]==="⚙️");if(i<0)T.push(...add);else T.splice(i,0,...add);
+  const res=lmRate()-T.reduce((x,t)=>x+t[2],0);if(Math.abs(res)>=.05)T.push(["🧩","Petits changements dans les autres secteurs",res,goT("eco")]);return T};
+/* Au début de la partie, le chômage affiché et le modèle de l'emploi partent du même point */
+const _ns31c=newState;newState=function(){const s=_ns31c.apply(this,arguments);if(s.lm&&s.why0){const keep=S;S=s;try{const r=lmRate();if(Math.abs(r-s.econ.unemp)>.3)s.econ.unemp=r;s.why0.u=s.econ.unemp}finally{S=keep}}return s};
 
 </script>
 
