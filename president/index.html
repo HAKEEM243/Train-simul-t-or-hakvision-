@@ -618,7 +618,7 @@ function tick(){if(!S||S.over)return;S.tm++;S.month++;if(S.month>11){S.month=0;S
   W.oil=clamp(W.oil+(80-W.oil)*.03+R(-4,4),25,200);if(chance(.005)){const up=chance(.5);W.oil*=up?1.6:.6;news(up?"🛢️ Flambée du prix du pétrole":"🛢️ Effondrement du prix du pétrole")}
   W.metal=clamp(W.metal+(100-W.metal)*.03+R(-4,4),40,220);
   /* Économie */
-  const baseG=1+2.5*(1-Math.min(S.eco,1.2)*.6);const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
+  const baseG=potG();const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
   const resG={petrole:(W.oil-80)/80*1.2,mines:(W.metal-100)/100*.8,tech:.4,tourisme:.3-(nWar?1:0),agri:0,aucune:0}[S.res]||0;
   const tG=baseG+(B.infra-14)*.06+(B.education-16)*.03+dealG(nDeals)-sancPen()+(S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0)+S.boost-(I.corr-30)/60+(mc("finances")-50)/60-(debtRatio()>1.2?.8:0)
     +(W.g-3)*.35+resG+(S.union?.3:0)-(T0.is-.05)*12-(T0.dou-.025)*25-(T0.ir-.09)*4-(S.cb.rate-3)*.2-nWar*.8+(ideoDef().gr||0)+(S.labG||0)+(S.eco3?orgGrowth():0)+(S.enG||0)+(S.digG||0)+(S.linkG||0)+(S.bopG||0)+(S.invG||0);
@@ -6194,9 +6194,9 @@ PN.hh=k=>{const x=HH.find(q=>q.k===k)||HH[0];const r=hhCalc(x);const W=hhWhy(x,r
 
 /* ===== 3. « Pourquoi ? » : les vraies causes de chaque indicateur, comme dans un graphe de causes ===== */
 const goT=(t)=>()=>{closeP();ui.tab=t;render()},opP=(p,a)=>()=>openP(p,a);
-function growthTerms(){const B=S.bud,I=S.idx,W=S.world,T0=S.tx;const baseG=1+2.5*(1-Math.min(S.eco,1.2)*.6);const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
+function growthTerms(){const B=S.bud,I=S.idx,W=S.world,T0=S.tx;const baseG=potG();const nDeals=Object.values(S.deals).filter(Boolean).length,nSancUs=Object.values(S.sancUs).filter(Boolean).length,nWar=Object.keys(S.wars).length;
   const resG={petrole:(W.oil-80)/80*1.2,mines:(W.metal-100)/100*.8,tech:.4,tourisme:.3-(nWar?1:0),agri:0,aucune:0}[S.res]||0;
-  return[["🌱","Potentiel de rattrapage du pays",baseG,null],["🛣️","Budget des infrastructures",(B.infra-14)*.06,opP("repart")],["🎓","Budget de l'éducation",(B.education-16)*.03,opP("repart")],["🤝","Accords commerciaux",dealG(nDeals),goT("monde")],
+  return[["🌱","Potentiel de croissance du pays",baseG,null],["🛣️","Budget des infrastructures",(B.infra-14)*.06,opP("repart")],["🎓","Budget de l'éducation",(B.education-16)*.03,opP("repart")],["🤝","Accords commerciaux",dealG(nDeals),goT("monde")],
     ["🚫","Sanctions contre ton pays",-sancPen(),goT("monde")],["💸","Politique budgétaire",S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0,opP("fiscal")],["🚀","Réformes et investissements récents",S.boost,null],
     ["🕳️","Corruption",-(I.corr-30)/60,opP("crime")],["👔","Compétence du ministre des Finances",(mc("finances")-50)/60,goT("conseil")],["🏦","Dette très élevée",debtRatio()>1.2?-.8:0,opP("dette")],["🌍","Économie mondiale",(W.g-3)*.35,goT("monde")],
     ["⛏️","Prix des matières premières",resG,opP("res2")],["🇺🇳","Union économique",S.union?.3:0,null],["🏢","Impôt sur les sociétés",-(T0.is-.05)*12,opP("taxes")],["🛃","Droits de douane",-(T0.dou-.025)*25,opP("taxes")],
@@ -6515,7 +6515,7 @@ const _mg31b=migrate;migrate=function(s){_mg31b(s);if(s.eco0==null)s.eco0=s.eco;
 /* Gains de productivité : calés au départ sur la croissance et la démographie du pays,
    pour que le chômage ne dérive pas tout seul quand on ne fait rien. Ensuite, seules tes décisions le font bouger. */
 function popGrowthNow(){let g=natGrowth();try{if(typeof migRate==="function"){const r=migRate();g+=r.reg+r.irr+r.ref}if(typeof emigRate==="function")g-=emigRate()}catch(e){}return g}
-function prodTrend(){const m=S.lm;if(m.pT==null){let g=2;try{g=growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){}m.pT=clamp(g-.88*popGrowthNow(),.3,4)}return m.pT}
+function prodTrend(){const m=S.lm;if(m.pT==null){let g=2;try{g=growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){}const pg=popGrowthNow();let sA=0,sS=.6,sI=.2;try{const J=lmJobs(),t=Math.max(1e-6,J.total);sA=J.A/t;sS=J.Sv/t;sI=J.I/t}catch(e){}m.pT=clamp(g-pg*(1-.5*sA-.25*sS)/Math.max(.15,.85*sS+.25*sI),0,5)}return m.pT}
 /* Garde-fous du marché du travail : quand le chômage tombe très bas, les salaires montent et les embauches ralentissent ;
    quand il explose, les salaires baissent et les embauches repartent. Entre les deux, rien ne bouge : tes décisions comptent. */
 const _lj31=lmJobs;lmJobs=function(){const J=_lj31();const a=S.lm&&S.lm.wadj||0;const W=a*J.Sv;J.W=W;J.total=Math.max(0,J.total+W);return J};
@@ -6529,6 +6529,15 @@ const _ut31=unempTerms;unempTerms=function(){const T=_ut31();if(!S.why0||!S.lm)r
   const res=lmRate()-T.reduce((x,t)=>x+t[2],0);if(Math.abs(res)>=.05)T.push(["🧩","Petits changements dans les autres secteurs",res,goT("eco")]);return T};
 /* Au début de la partie, le chômage affiché et le modèle de l'emploi partent du même point */
 const _ns31c=newState;newState=function(){const s=_ns31c.apply(this,arguments);if(s.lm&&s.why0){const keep=S;S=s;try{const r=lmRate();if(Math.abs(r-s.econ.unemp)>.3)s.econ.unemp=r;s.why0.u=s.econ.unemp}finally{S=keep}}return s};
+/* Potentiel de croissance réel de chaque pays (% par an, ordres de grandeur à moyen terme).
+   Au départ, la croissance attendue est calée sur ce potentiel ; ensuite seules les différences comptent. */
+const POTG={us:2,cn:4.2,de:1,jp:.6,in:6.5,gb:1.4,fr:1.2,it:.7,ru:1.2,ca:1.7,br:2,mx:2,kr:2,au:2.2,es:1.8,pt:1.8,be:1.2,nl:1.4,ch:1.4,ro:3,tr:3.2,ar:2,ht:1.5,id:5,th:2.8,sa:3.5,eg:4.5,ma:3.5,dz:2.8,tn:2,sn:6,ml:5,ci:6.5,ng:3.2,cm:4.2,ga:2.8,cg:3,cd:5.5,ao:3,rw:7,ke:5.2,et:6.5,za:1.5,
+  pl:3,se:1.9,no:1.8,gr:1.5,ae:4,qa:3,jo:2.6,kz:4,pk:3.5,bd:6,vn:6.2,ph:6,my:4.4,sg:2.5,nz:2,co:3,cl:2.3,pe:2.8,ve:1.5,cu:1,bj:6,bf:5,ne:6,td:3.5,gn:5.5,tg:5.5,gh:4.8,tz:6,ug:6,mg:4.5,bi:3.5,cf:3,mr:4.5,kp:1,er:3,sd:2,ua:2.5};
+function potG(){if(S.gCal==null){if(POTG[S.cid]==null)return 1+2.5*(1-Math.min(S.eco,1.2)*.6);S.gCal=0;let t=0;try{t=growthTerms().reduce((a,x)=>a+x[2],0)}catch(e){}S.gCal=POTG[S.cid]-t}
+  return S.gCal-Math.max(0,S.eco-(S.eco0??S.eco))*2}
+const _ns31d=newState;newState=function(){const s=_ns31d.apply(this,arguments);const keep=S;S=s;try{s.gCal=null;potG()}finally{S=keep}return s};
+const _mg31d=migrate;migrate=function(s){_mg31d(s);if(s.gCal===undefined)s.gCal=1+2.5*(1-Math.min(s.eco,1.2)*.6);
+  if(s.cid==="kp"&&s.dip0)for(const b of["us","jp","kr","fr","gb","de"])if(s.dip0[b]!=null)s.dip0[b]=Math.min(s.dip0[b],15);return s};
 
 </script>
 
