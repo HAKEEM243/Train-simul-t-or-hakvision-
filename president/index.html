@@ -6604,6 +6604,106 @@ const _lk33=linksMonth;linksMonth=function(){_lk33();autoRepay();if(S.month===0)
 const _pd33=PN.dette;PN.dette=()=>{const r=_pd33();if(!r)return r;const on=!(S.flags&&S.flags.noRepay);
   r.h=card("🏦 Remboursement automatique",row({i:on?"✅":"⏸️",t:on?"Activé : l'excédent du trésor rembourse la dette":"Désactivé : le trésor garde tout",s:`Au-delà de 10 % du PIB en caisse · remboursé cette année : ${md(S.repY||0)} · touche pour ${on?"désactiver":"activer"}`,on:()=>{S.flags=S.flags||{};S.flags.noRepay=on;render();renderPanel()}}))+r.h;return r};
 
+/* ===== v34 — Provinces : actions province par province, ressources régionales, effets immédiats ===== */
+/* Ressources régionales (en plus des gisements) */
+const RR={manioc:["🥔","Manioc"],huile_palme:["🌴","Huile de palme"],caoutchouc:["🌳","Caoutchouc"],the:["🍵","Thé"],sucre:["🍬","Canne à sucre"],tabac:["🍂","Tabac"],vin:["🍷","Vin"],
+  laine:["🐑","Laine"],betail:["🐄","Bétail"],riz:["🍚","Riz"],mais:["🌽","Maïs"],epices:["🌶️","Épices"],coton:["🧶","Coton"],sel:["🧂","Sel"],marbre:["🏛️","Marbre"],soie:["🧵","Soie"],
+  fleurs:["🌷","Fleurs coupées"],agrumes:["🍊","Agrumes"],olives:["🫒","Olives"],poisson:["🐟","Pêche"],bois:["🪵","Bois"],cacao:["🍫","Cacao"],cafe:["☕","Café"],ble:["🌾","Blé"],
+  soja:["🫘","Soja"],vanille:["🌼","Vanille"],dattes:["🌴","Dattes"],cajou:["🥜","Noix de cajou"],arachide:["🥜","Arachide"],karite:["🧴","Karité"],gomme:["🌵","Gomme arabique"],
+  perles:["🦪","Perles"],volaille:["🐔","Volaille"],lait:["🥛","Produits laitiers"],crevettes:["🦐","Crevettes"],bananes:["🍌","Bananes"],pommes:["🍎","Pommes"],potasse:["🧪","Potasse"],
+  pierre:["🪨","Pierre et granit"],ambre:["🟠","Ambre"],terres_rares:["🧲","Terres rares"],etain:["🥫","Étain"],zinc:["🔩","Zinc"],graphite:["✏️","Graphite"],tungstene:["⚙️","Tungstène"],
+  gemmes:["💠","Pierres précieuses"],tournesol:["🌻","Tournesol"],noisettes:["🌰","Noisettes"],coco:["🥥","Noix de coco"],sesame:["🌾","Sésame"],liege:["🍾","Liège"]};
+const RRC={cd:["manioc","huile_palme","cafe","etain","bois","poisson","caoutchouc","cacao","mais","betail"],cg:["bois","manioc","huile_palme","poisson","cacao"],
+  ci:["cacao","cajou","caoutchouc","huile_palme","cafe","bananes","coton"],gh:["cacao","cajou","karite","bois","huile_palme","manioc"],ng:["manioc","sesame","huile_palme","mais","karite","betail","etain","arachide"],
+  sn:["arachide","poisson","sel","riz","mais","gomme"],ml:["coton","betail","riz","karite","sel"],bf:["coton","karite","betail","sesame","cajou"],ne:["betail","sel","arachide","gomme","sesame"],
+  td:["coton","betail","gomme","arachide","sesame"],gn:["riz","cajou","bananes","cafe","huile_palme"],cm:["cacao","cafe","bananes","bois","caoutchouc","huile_palme","coton"],
+  ga:["bois","huile_palme","caoutchouc","poisson"],ao:["cafe","poisson","manioc","bois","mais"],za:["vin","laine","agrumes","mais","sucre","betail"],ma:["agrumes","olives","poisson","sel","epices"],
+  dz:["dattes","olives","ble","sel","liege"],tn:["olives","dattes","poisson","agrumes","ble"],eg:["coton","riz","agrumes","sucre","dattes","marbre"],et:["cafe","fleurs","betail","sesame","laine"],
+  rw:["cafe","the","fleurs","etain","tungstene"],ke:["the","fleurs","cafe","betail","sucre"],tz:["cafe","cajou","tabac","gemmes","epices","poisson"],ug:["cafe","the","poisson","bananes","coton"],
+  mg:["vanille","epices","riz","gemmes","sucre","poisson"],bi:["cafe","the","bananes"],cf:["bois","cafe","coton","betail"],mr:["poisson","betail","sel","dattes"],tg:["coton","cacao","cafe","cajou"],
+  bj:["coton","cajou","karite","mais"],sd:["gomme","coton","betail","sesame","arachide"],er:["sel","betail","poisson"],
+  us:["mais","soja","ble","betail","coton","bois","vin","agrumes","volaille","terres_rares"],ca:["ble","bois","potasse","poisson","betail","graphite"],mx:["mais","agrumes","sucre","cafe","betail"],
+  br:["soja","sucre","cafe","betail","agrumes","bois","volaille","caoutchouc"],ar:["soja","ble","betail","vin","mais","laine"],cl:["vin","poisson","pommes","bois","sel"],pe:["poisson","cafe","laine","zinc","etain"],
+  co:["cafe","fleurs","bananes","huile_palme","gemmes"],ve:["cacao","cafe","betail","mais"],cu:["sucre","tabac","agrumes","poisson"],ht:["cafe","bananes","sucre","vanille"],
+  fr:["vin","ble","lait","betail","pommes","sel"],de:["ble","lait","betail","pommes","potasse","vin"],it:["vin","olives","agrumes","marbre","lait","riz"],es:["olives","vin","agrumes","betail","poisson","marbre"],
+  pt:["vin","liege","poisson","olives","marbre"],gb:["laine","poisson","ble","betail","lait"],be:["lait","ble","pommes","pierre"],nl:["fleurs","lait","volaille","poisson"],ch:["lait","pierre","bois","vin"],
+  ro:["ble","mais","bois","vin","sel"],pl:["pommes","ble","volaille","ambre","lait"],se:["bois","poisson","lait","graphite"],no:["poisson","bois","lait","pierre"],gr:["olives","poisson","marbre","vin","coton"],
+  ru:["ble","bois","poisson","betail","tungstene","terres_rares"],ua:["ble","mais","tournesol","volaille","graphite"],tr:["noisettes","agrumes","coton","the","marbre","tabac"],
+  sa:["dattes","poisson","volaille","sel"],ae:["dattes","poisson","perles"],qa:["poisson","perles","dattes"],jo:["potasse","olives","agrumes","sel"],kz:["ble","betail","laine","zinc","tungstene"],
+  pk:["coton","riz","ble","sucre","agrumes","sel"],in:["riz","the","epices","coton","sucre","ble","soie","lait"],bd:["riz","the","poisson","crevettes","coton"],
+  cn:["riz","the","soie","volaille","terres_rares","tungstene","graphite"],jp:["riz","poisson","the","perles"],kr:["riz","poisson","volaille"],kp:["riz","mais","poisson","graphite","tungstene"],
+  vn:["riz","cafe","caoutchouc","crevettes","epices","cajou"],th:["riz","caoutchouc","sucre","crevettes","bananes"],id:["huile_palme","caoutchouc","cafe","cacao","epices","etain","poisson"],
+  ph:["bananes","coco","poisson","sucre","riz"],my:["huile_palme","caoutchouc","etain","poisson","bois"],sg:["poisson","volaille"],au:["laine","ble","betail","vin","sucre","terres_rares","poisson"],
+  nz:["lait","laine","betail","vin","bois","poisson"]};
+const PMAX=r=>r.rural?2:(r.n||"").startsWith("Capitale")?4:3;
+function provInit(s){const keep=S;S=s;try{const L=RRC[s.cid]||["mais","betail","poisson","bois"];const fisc=clamp(30+s.idx.inst*.45-s.idx.corr*.25,15,85);
+  s.prov=s.regions.map((r,i)=>{const eco=Math.max(1,Math.round(1+(r.dev||30)/8));const res=r.rural?L[0]:L[(i+1)%L.length];return{eco,eco0:eco,fisc,fisc0:fisc,inf:0,pg:0,res}});
+  s.rpx=s.rpx||{};for(const k in RR)s.rpx[k]=s.rpx[k]||100;s.provRev0=provRevRaw(s)}finally{S=keep}}
+function provSync(){if(!S.prov||S.prov.length!==S.regions.length){const old=S.prov||[];provInit(S);old.forEach((o,i)=>{if(S.prov[i])Object.assign(S.prov[i],o)})}}
+const popW=i=>{const t=S.regions.reduce((a,r)=>a+r.pop,0)||1;return S.regions[i].pop/t};
+/* Valeur produite par les ressources régionales (par an) : la base vaut 1,5 % du PIB au départ */
+function provRevRaw(s){s=s||S;const t=s.regions.reduce((a,r)=>a+r.pop,0)||1;return s.prov.reduce((a,p,i)=>a+p.eco*(s.regions[i].pop/t)*(s.rpx[p.res]||100)/100*(.5+p.fisc/100),0)}
+function provRegY(i){const p=S.prov[i];const base=S.provRev0||1;return S.econ.gdp*.015*p.eco*popW(i)*(S.rpx[p.res]||100)/100*(.5+p.fisc/100)/base}
+function provRevY(){return S.econ.gdp*.015*provRevRaw()/(S.provRev0||1)}
+/* Effet fiscal : l'efficacité de la collecte dans chaque province */
+function fiscF(){if(!S.prov)return 1;let a=0,b=0;S.prov.forEach((p,i)=>{a+=popW(i)*p.fisc;b+=popW(i)*p.fisc0});return b?a/b:1}
+const _rv34=revenueM;revenueM=function(){const r=_rv34();if(!S.prov)return r;return r+(S.econ.gdp*S.econ.tax*1.2*(fiscF()-1)+provRevY()-S.econ.gdp*.015)/12};
+/* Emplois créés par l'économie des provinces */
+const _lj34=lmJobs;lmJobs=function(){const J=_lj34();if(!S.prov||!S.lm)return J;const LF=lmLF();const x=S.prov.reduce((a,p,i)=>a+(p.eco-p.eco0)*popW(i),0);const P=LF*.006*x;J.PV=P;J.total=Math.max(0,J.total+P);return J};
+const _ut34=unempTerms;unempTerms=function(){const T=_ut34();if(!S.prov||!S.why0)return T;const J=lmJobs(),LF=lmLF();const d=-(J.PV||0)/LF*100;if(Math.abs(d)<.02)return T;
+  const res=T.findIndex(t=>t[0]==="🧩");const row0=["🏭",`Économie des provinces : ${d<0?"créés":"perdus"}`,d,goT("provinces")];if(res>=0){T[res][2]-=d;if(Math.abs(T[res][2])<.05)T.splice(res,1)}T.push(row0);return T};
+/* Croissance : infrastructures provinciales (durable) */
+function provInfG(){if(!S.prov)return 0;const x=S.prov.reduce((a,p,i)=>a+p.inf*popW(i),0);return 1.2*(1-Math.exp(-x/1.5))}
+const _gt34=growthTerms;growthTerms=function(){const T=_gt34();T.push(["🛣️","Infrastructures des provinces",provInfG(),goT("provinces")]);return T};
+/* Démographie : maternités et centres de santé de province */
+const _ng34=natGrowth;natGrowth=function(){const b=_ng34();if(!S.prov)return b;return b+S.prov.reduce((a,p,i)=>a+p.pg*popW(i),0)};
+/* Prix mondiaux des ressources régionales */
+function rpxMonth(){if(!S.rpx)return;for(const k in RR)S.rpx[k]=clamp(S.rpx[k]+(100-S.rpx[k])*.04+R(-5,5),45,220)}
+const _lk34=linksMonth;linksMonth=function(){_lk34();provSync();rpxMonth()};
+/* Les quatre actions provinciales */
+const PACT=[
+  {k:"eco",s:"Économie",i:"🏭",n:"Investir dans l'économie",d:"Le niveau économique de la province fait tourner ses entreprises et sa ressource. Effet immédiat : emplois, croissance, recettes.",
+    cost:(p,i)=>S.econ.gdp*.0005*(1+p.eco*.15)*(.6+popW(i)*2),can:p=>p.eco<30,lvl:p=>`${nf(p.eco,0)}`,
+    f:(p,i,c)=>{p.eco+=1;S.boost+=c/S.econ.gdp*90;S.regions[i].dev=clamp((S.regions[i].dev||30)+1.2);S.regions[i].ap=clamp((S.regions[i].ap||50)+.8);fx({grp:{entr:.3,trav:.2}})}},
+  {k:"fisc",s:"Fiscalité",i:"💰",n:"Efficacité fiscale",d:"Mieux collecter l'impôt dans la province. Effet immédiat : recettes de l'État en hausse, mais la population grogne un peu.",
+    cost:(p,i)=>{const f0=S.prov.reduce((x,q,j)=>x+q.fisc0*popW(j),0)||30;return S.econ.gdp*Math.max(.0002,S.econ.tax*1.2*2*popW(i)/f0*1.8*(1+p.fisc/60))},can:p=>p.fisc<95,lvl:p=>`${nf(p.fisc,0)} %`,
+    f:(p,i)=>{p.fisc=Math.min(95,p.fisc+2);S.regions[i].ap=clamp((S.regions[i].ap||50)-.8);S.idx.corr=clamp(S.idx.corr-.15);fx({grp:{entr:-.2}})}},
+  {k:"inf",s:"Infrastructures",i:"🛣️",n:"Développer l'infrastructure",d:"Routes, électricité et eau dans la province. Effet immédiat : croissance durable, moins de tensions, développement.",
+    cost:(p,i)=>S.econ.gdp*.0012*(1+p.inf*.35)*(.6+popW(i)*2),can:(p,i)=>p.inf<PMAX(S.regions[i]),lvl:(p,i)=>`${p.inf} / ${PMAX(S.regions[i])}`,
+    f:(p,i,c)=>{p.inf+=1;S.idx.infra=clamp(S.idx.infra+6*popW(i)+.3);S.regions[i].dev=clamp((S.regions[i].dev||30)+3);S.regions[i].unrest=clamp((S.regions[i].unrest||0)-3);S.boost+=c/S.econ.gdp*40}},
+  {k:"pg",s:"Population",i:"👶",n:"Croissance de la population",d:"Maternités et centres de santé dans la province. Effet immédiat : santé, popularité locale et population en hausse.",
+    cost:(p,i)=>S.econ.gdp*.00025*(1+p.pg*4)*(.6+popW(i)*2),can:p=>p.pg<1,lvl:p=>`+${nf(p.pg,2)} %/an`,
+    f:(p,i)=>{p.pg=Math.min(1,p.pg+.05);S.idx.sante=clamp(S.idx.sante+1.5*popW(i)+.1);S.regions[i].ap=clamp((S.regions[i].ap||50)+1.2);fx({grp:{retr:.2}})}}];
+ui.pact=ui.pact||"eco";ui.pmul=ui.pmul||1;
+function provDo(k,i){const a=PACT.find(q=>q.k===k),p=S.prov[i];let n=0,tot=0;for(let j=0;j<ui.pmul;j++){if(!a.can(p,i))break;const c=a.cost(p,i);if(S.econ.res<c)break;S.econ.res-=c;tot+=c;a.f(p,i,c);n++}
+  if(!n){toast("💰 Trésor insuffisant",`Il faut ${md(a.cost(p,i))} en caisse`);return}normBud();log(`${a.i} ${a.n} · ${S.regions[i].city}${n>1?` (×${n})`:""} : ${md(tot)}.`,"Action en province");render()}
+TAB.provinces=()=>{provSync();const a=PACT.find(q=>q.k===ui.pact)||PACT[0];
+  let h=`<div class="segw pacts">${PACT.map(q=>`<button type="button" class="${q.k===a.k?"on":""}" data-h="${hb(()=>{ui.pact=q.k;render()})}">${q.i} ${q.s}</button>`).join("")}</div>`;
+  h+=card(`${a.i} ${a.n}`,note(a.d)+`<div class="segw">${[1,5,10].map(m=>`<button type="button" class="${ui.pmul===m?"on":""}" data-h="${hb(()=>{ui.pmul=m;render()})}">Effectuer ×${m}</button>`).join("")}</div>`
+    +`<div class="ptab">${S.prov.map((p,i)=>{const r=S.regions[i],c=a.cost(p,i),ok=a.can(p,i,c),rich=S.econ.res>=c;const rr=RR[p.res]||["•",p.res];
+      return`<button type="button" class="prow${ok&&rich?"":" off"}" data-h="${hb(()=>provDo(a.k,i))}"><span class="pn"><b>${esc(r.city==="campagnes"?"Campagnes":r.city)}</b><small>${rr[0]} ${rr[1]} · ${nf(r.pop*S.popM,1)} M hab.</small></span><span class="pl">${a.lvl(p,i)}</span><span class="pc">${ok?md(c):"max"}</span></button>`}).join("")}</div>`
+    +note(`Trésor : <b>${md(S.econ.res)}</b>. Touche une province pour agir : l'argent part tout de suite et les effets s'affichent en haut de l'écran.`));
+  const L=S.prov.map((p,i)=>[i,p]);
+  h+=card("🌾 Ressources des provinces",L.map(([i,p])=>{const rr=RR[p.res]||["•",p.res],px=S.rpx[p.res]||100;return row({i:rr[0],t:`${rr[1]} · ${esc(S.regions[i].city==="campagnes"?"Campagnes":S.regions[i].city)}`,s:`Niveau économique ${p.eco} · prix mondial ${px>=100?"+":"−"}${nf(Math.abs(px-100),0)} %`,r:`${md(provRegY(i)/12)}/mois`,bar:clamp(px/2.2)})}).join("")
+    +note(`Recettes supplémentaires grâce aux provinces : <b>${md((provRevY()-S.econ.gdp*.015+S.econ.gdp*S.econ.tax*1.2*(fiscF()-1))/12)}</b> par mois (fiscalité et ressources, par rapport au début du mandat). Les prix mondiaux bougent chaque mois.`));
+  return h};
+(function(){try{const sp=SPACES.find(s=>s[0]==="terr");if(sp&&!sp[3].some(x=>x[0]==="provinces"))sp[3].unshift(["provinces","🗺️ Provinces"]);if(!TABS.some(t=>t[0]==="provinces"))TABS.push(["provinces","","Provinces"]);
+  const st=document.createElement("style");st.textContent=`.pacts{flex-wrap:wrap;margin:0 0 10px}.pacts button{flex:1 1 45%}.ptab{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .prow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:inherit;font:inherit;cursor:pointer}
+  .prow.off{opacity:.5}.prow .pn small{display:block;color:var(--mut);font-size:12px}.prow .pl{font-weight:700;font-variant-numeric:tabular-nums}.prow .pc{color:var(--gold);font-weight:700;font-size:13px;white-space:nowrap}`;document.head.appendChild(st)}catch(e){}})();
+const _ns34=newState;newState=function(){const s=_ns34.apply(this,arguments);provInit(s);return s};
+const _mg34=migrate;migrate=function(s){_mg34(s);if(!s.prov)provInit(s);return s};
+/* Le conseiller propose les provinces */
+const _nx34=nextSteps;nextSteps=function(){const L=_nx34();try{if(S.prov&&S.econ.res>S.econ.gdp*.01&&L.length<5)L.push(["🗺️","Investir dans tes provinces","Économie, fiscalité, routes, santé : effet immédiat",()=>{closeP();ui.tab="provinces";render()}])}catch(e){}return L};
+/* Bandeau des conséquences : recettes, niveaux des provinces, démographie */
+const _sn34=snap;snap=function(){const o=_sn34();if(!o||!S.prov)return o;o.rev=revenueM();o.pv=S.prov.map(p=>[p.eco,p.fisc,p.inf,p.pg]);try{o.ng=natGrowth()}catch(e){}return o};
+const _cd34=consDiff;consDiff=function(a,b){const L=_cd34(a,b);if(!a||!b||!a.pv||!b.pv)return L;const add=[];const dr=(b.rev-a.rev)*12;if(Math.abs(dr)>S.econ.gdp*2e-5)add.push([`🧾 Recettes de l'État ${dr>0?"+":"−"}${md(Math.abs(dr))} par an`,dr>0]);
+  b.pv.forEach((v,i)=>{const o=a.pv[i];if(!o)return;const c=S.regions[i].city==="campagnes"?"Campagnes":S.regions[i].city;
+    if(v[0]!==o[0])add.push([`🏭 ${c} : économie ${o[0]} → ${v[0]}`,v[0]>o[0]]);if(v[1]!==o[1])add.push([`💰 ${c} : collecte de l'impôt ${nf(o[1],0)} → ${nf(v[1],0)} %`,v[1]>o[1]]);
+    if(v[2]!==o[2])add.push([`🛣️ ${c} : infrastructures ${o[2]} → ${v[2]}`,v[2]>o[2]]);if(v[3]!==o[3])add.push([`👶 ${c} : natalité et santé +${nf(v[3]-o[3],2)} %/an`,v[3]>o[3]])});
+  if(a.ng!=null&&Math.abs(b.ng-a.ng)>=.005)add.push([`👥 Croissance de la population ${b.ng>a.ng?"+":"−"}${nf(Math.abs(b.ng-a.ng),2)} %/an`,b.ng>a.ng]);
+  const ds=(b.idx.sante||0)-(a.idx.sante||0);if(Math.abs(ds)>=.1&&Math.abs(ds)<.5)add.push([`Santé +${nf(ds,1)}`,ds>0]);return add.concat(L)};
+
 </script>
 
 </body></html>
