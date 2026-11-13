@@ -6704,6 +6704,88 @@ const _cd34=consDiff;consDiff=function(a,b){const L=_cd34(a,b);if(!a||!b||!a.pv|
   if(a.ng!=null&&Math.abs(b.ng-a.ng)>=.005)add.push([`👥 Croissance de la population ${b.ng>a.ng?"+":"−"}${nf(Math.abs(b.ng-a.ng),2)} %/an`,b.ng>a.ng]);
   const ds=(b.idx.sante||0)-(a.idx.sante||0);if(Math.abs(ds)>=.1&&Math.abs(ds)<.5)add.push([`Santé +${nf(ds,1)}`,ds>0]);return add.concat(L)};
 
+/* ===== v35 — Gisements plus riches, carte des provinces cliquable, programme nucléaire ===== */
+/* 1. Nouveaux minerais et gisements authentiques */
+PRODS.push({k:"zinc",i:"🔩",n:"Zinc",px:"metal",env:-1,ref:"Usine de zinc"},{k:"etain",i:"🥫",n:"Étain",px:"metal",env:-1,ref:"Fonderie d'étain"},
+  {k:"germanium",i:"💡",n:"Germanium",px:"own",env:-1,ref:"Usine de semi-conducteurs"},{k:"graphite",i:"✏️",n:"Graphite",px:"own",env:-1,ref:"Usine d'anodes pour batteries"},
+  {k:"terres_rares",i:"🧲",n:"Terres rares",px:"own",env:-2,ref:"Usine d'aimants"},{k:"tungstene",i:"⚙️",n:"Tungstène",px:"own",env:-1,ref:"Usine de carbure"},
+  {k:"niobium",i:"🔷",n:"Niobium",px:"own",env:-1,ref:"Aciérie spéciale"});
+EXTR.push("zinc","etain","germanium","graphite","terres_rares","tungstene","niobium");
+(function(){const add={cd:[["manganese",1,.5],["zinc",1,.5],["lithium",1,.4],["uranium",1,.2],["germanium",1,.15],["etain",2,.6],["etain",5,.3],["tungstene",5,.1],["gaz",2,.1]],
+  cn:[["terres_rares",4,.8],["tungstene",5,.4],["graphite",0,.3],["zinc",5,.2]],au:[["zinc",4,.3],["terres_rares",4,.1]],br:[["niobium",2,.4],["manganese",4,.1],["graphite",2,.05]],
+  in:[["zinc",3,.2],["manganese",3,.1]],id:[["etain",3,.3]],ca:[["zinc",1,.1],["graphite",1,.05]],us:[["terres_rares",4,.05],["zinc",2,.05]],pe:[["zinc",1,1],["etain",3,.3]],
+  rw:[["etain",2,.5],["tungstene",2,.3]],mg:[["graphite",1,.2],["terres_rares",1,.05]],my:[["etain",4,.1],["terres_rares",4,.05]],vn:[["terres_rares",1,.1],["tungstene",1,.1]],
+  kz:[["zinc",3,.5],["tungstene",3,.05]],ru:[["tungstene",4,.05]],za:[["zinc",1,.05]],mx:[["argent",1,.6],["zinc",1,.2]],kp:[["terres_rares",0,.3],["graphite",0,.1],["tungstene",0,.2]],
+  ng:[["etain",2,.1],["zinc",2,.05]],tz:[["graphite",2,.1]],ma:[["argent",2,.1]],ua:[["graphite",1,.1],["manganese",1,.2]],bf:[["zinc",2,.1]]};
+  for(const c in add){if(!RES_AUTH[c])RES_AUTH[c]=[];RES_AUTH[c].push(...add[c])}})();
+/* Les anciennes parties gagnent les nouveaux gisements, sans changer le point de départ (seul ce qui change compte) */
+function depAddMissing(s){const A=RES_AUTH[s.cid];if(!A||!s.dep)return;const keep=S;S=s;try{let added=false;for(const[k,ix,w]of A){if(s.dep.some(d=>d.k===k&&d.r===ix))continue;if(!s.regions[ix]||s.regions[ix].rural)continue;
+  if(!EXTR.includes(k))continue;const p=w/100;const y=(typeof RES_YEARS!=="undefined"&&RES_YEARS[k])||[30,60];s.dep.push({id:++s.depN,k,r:ix,p,p0:p,R:p*RI(...y),op:"etat",roy:.12,st:"actif",norm:false,tm:s.tm||0});s.prd[k]=s.prd[k]||{w:0,lvl:100,tax:5,ban:false,ref:0,con:[],big:false};s.prd[k].w+=p;s.prd[k].dep=1;s.px=s.px||{};s.px[k]=s.px[k]??100;added=true}
+  if(added){try{depSync()}catch(e){}s.depRev0=depRevY()/s.econ.gdp}}finally{S=keep}}
+const _mg35=migrate;migrate=function(s){_mg35(s);depAddMissing(s);return s};
+/* Gisements d'une province */
+const depsOf=i=>(S.dep||[]).filter(d=>d.r===i&&d.st!=="decouvert");
+/* 2. Carte des provinces */
+function pathPolys(d){const P=[];let cur=null,x=0,y=0;const re=/([MlZ])|(-?\d*\.?\d+),(-?\d*\.?\d+)/g;let m,cmd="M";
+  while((m=re.exec(d))){if(m[1]){cmd=m[1];if(cmd==="Z"){if(cur&&cur.length>2)P.push(cur);cur=null}continue}const a=+m[2],b=+m[3];
+    if(cmd==="M"){x=a;y=b;cur=[[x,y]];cmd="l"}else{x+=a;y+=b;(cur||(cur=[[x,y]])).push([x,y])}}if(cur&&cur.length>2)P.push(cur);return P}
+function inPolys(P,x,y){let c=false;for(const pl of P)for(let i=0,j=pl.length-1;i<pl.length;j=i++){const[xi,yi]=pl[i],[xj,yj]=pl[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c}
+function clipHalf(poly,a,b){const out=[];const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,nx=b[0]-a[0],ny=b[1]-a[1];const f=p=>(p[0]-mx)*nx+(p[1]-my)*ny;
+  for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp=f(p),fq=f(q);if(fp<=0)out.push(p);if((fp<0)!==(fq<0)&&fp!==fq){const t=fp/(fp-fq);out.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t])}}return out}
+function provGeo(){const c=home();if(c.fict||!window.WORLDMAP)return null;const own=WORLDMAP.paths[c.id.toUpperCase()];if(!own)return null;
+  if(S._pg&&S._pg.k===c.id+S.regions.length)return S._pg;const P=pathPolys(own.path);if(!P.length)return null;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const pl of P)for(const[x,y]of pl){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)}
+  const seeds=[];S.regions.forEach((r,i)=>{if(r.rural)return;const ll=cityLL(i);if(ll){const[x,y]=proj(ll[0],ll[1]);seeds.push({x,y,i})}});if(!seeds.length)return null;
+  const ru=S.regions.findIndex(r=>r.rural);if(ru>=0){const cand=[];const n=14;for(let a=0;a<=n;a++)for(let b=0;b<=n;b++){const x=x0+(x1-x0)*a/n,y=y0+(y1-y0)*b/n;if(inPolys(P,x,y))cand.push([x,y])}
+    const k=Math.max(1,Math.min(3,Math.round(cand.length/60)));for(let t=0;t<k;t++){let best=null,bd=-1;for(const p of cand){const d=Math.min(...seeds.map(s=>Math.hypot(s.x-p[0],s.y-p[1])));if(d>bd){bd=d;best=p}}if(best&&bd>(x1-x0)*.12)seeds.push({x:best[0],y:best[1],i:ru,rural:1})}}
+  const pad=(x1-x0+y1-y0)*.05,box=[[x0-pad,y0-pad],[x1+pad,y0-pad],[x1+pad,y1+pad],[x0-pad,y1+pad]];
+  const cells=seeds.map(s=>{let poly=box.slice();for(const o of seeds)if(o!==s)poly=clipHalf(poly,[s.x,s.y],[o.x,o.y]);return{...s,poly}});
+  S._pg={k:c.id+S.regions.length,path:own.path,vb:[x0-pad,y0-pad,x1-x0+2*pad,y1-y0+2*pad],cells};return S._pg}
+const PVCOL=["#d9e8c8","#b9dba0","#8ec97a","#5fb35a","#3a9a4b","#24763b","#14532d"];
+function provVal(i){const p=S.prov[i],r=S.regions[i];switch(ui.pact){case"fisc":return p.fisc/100;case"inf":return p.inf/PMAX(r);case"pg":return .2+p.pg*.8;default:return Math.min(1,p.eco/16)}}
+function provMap(){const G=provGeo();if(!G)return"";const sw=G.vb[2]/220;
+  const cells=G.cells.map(c=>{const v=provVal(c.i),col=PVCOL[Math.min(PVCOL.length-1,Math.floor(v*PVCOL.length))];return`<path d="M${c.poly.map(p=>p[0].toFixed(2)+","+p[1].toFixed(2)).join("L")}Z" fill="${col}" stroke="#123" stroke-width="${sw}" data-h="${hb(()=>provDo(ui.pact,c.i))}" class="pcell"/>`}).join("");
+  const labels=G.cells.filter(c=>!c.rural).map(c=>{const p=S.prov[c.i],a=PACT.find(q=>q.k===ui.pact)||PACT[0];const ic=depsOf(c.i).slice(0,3).map(d=>(prodDef(d.k)||{}).i||"⛏️").join("");const rr=RR[p.res]||["",""];
+    return`<g pointer-events="none"><circle cx="${c.x}" cy="${c.y}" r="${sw*2.2}" fill="#fff" stroke="#123" stroke-width="${sw*.6}"/><text x="${c.x}" y="${c.y-sw*3.5}" font-size="${sw*7}" text-anchor="middle" class="plab" stroke-width="${sw*1.2}">${esc(S.regions[c.i].city)} · ${a.lvl(p,c.i)}</text><text x="${c.x}" y="${c.y+sw*8.5}" font-size="${sw*7}" text-anchor="middle">${rr[0]}${ic}</text></g>`}).join("");
+  const rl=G.cells.filter(c=>c.rural).map(c=>`<text x="${c.x}" y="${c.y}" font-size="${sw*6}" text-anchor="middle" pointer-events="none" class="plab" stroke-width="${sw*1.2}">Campagnes</text>`).join("");
+  return`<div class="pmap"><svg viewBox="${G.vb.join(" ")}" preserveAspectRatio="xMidYMid meet"><defs><clipPath id="pclip"><path d="${G.path}"/></clipPath></defs><g clip-path="url(#pclip)">${cells}</g><path d="${G.path}" fill="none" stroke="#0b1b33" stroke-width="${sw*1.4}"/>${labels}${rl}</svg></div>`
+    +note("Touche une province sur la carte (ou dans la liste) pour appliquer l'action choisie. Plus la couleur est foncée, plus le niveau est élevé.")}
+const _tp35=TAB.provinces;TAB.provinces=()=>{let h=_tp35();const m=provMap();if(m){const i=h.indexOf('<section');h=i>=0?h.slice(0,i)+card("🗺️ Carte des provinces",m)+h.slice(i):m+h}
+  /* gisements dans la liste */
+  h=h.replace(/<small>([^<]*) hab\.<\/small>/g,(all,t)=>all);return h};
+/* Gisements par province dans la liste des ressources */
+const _rr35=TAB.provinces;TAB.provinces=()=>{const h=_rr35();const rows=S.regions.map((r,i)=>{const D=depsOf(i);if(!D.length)return"";return row({i:"⛏️",t:`Sous-sol · ${esc(r.city==="campagnes"?"Campagnes":r.city)}`,s:D.map(d=>`${(prodDef(d.k)||{}).i||""} ${(prodDef(d.k)||{n:d.k}).n}${d.st!=="actif"?" (à l'arrêt)":""}`).join(" · "),on:()=>openP("res2")})}).join("");
+  return rows?h+card("⛏️ Gisements des provinces",rows+note("Cobalt, cuivre, coltan, manganèse… se gèrent dans « Ressources » : ouvrir, nationaliser, transformer sur place.")):h};
+/* 3. Programme nucléaire */
+const NUKE_POW=["us","ru","cn","fr","gb","in","pk","kp"];
+function nk(){return S.nuke||(S.nuke={lvl:0,bombs:0,prod:0,ever:false})}
+function nkStartCost(){return S.econ.gdp*.004*(1+nk().lvl*.5)}
+function nkBombCost(){return S.econ.gdp*.012*(1-nk().lvl*.1)}
+function nkDays(){return Math.round(180*(1-.08*(nk().lvl-1)))}
+function nkGlobal(){if(!S.nuke||nk().ever)return;nk().ever=true;fx({dip:{all:-10,demo:-8},idx:{inst:-4},grp:{arm:5,jeun:-3}});for(const b of["us","fr","gb","de","jp"])if(S.dip[b]!=null&&chance(.5))S.sancUs[b]=true;news("☢️ Le monde découvre ton programme nucléaire militaire");log("☢️ Programme nucléaire militaire révélé : condamnations et sanctions.","Armes nucléaires")}
+PN.nuke=()=>{const N=nk();const wars=Object.keys(S.wars);const can=N.lvl>=2;
+  let h=card("☢️ Réacteur nucléaire",kv([["Niveau",`${N.lvl} / 4`],["Électricité",N.lvl?`+${N.lvl*3} % de production`:"aucune"],["Coût de la bombe",N.lvl?`−${N.lvl*10} %`:"—"]])
+    +row({i:"⚛️",t:N.lvl>=4?"Réacteur au maximum":`Améliorer le réacteur (niveau ${N.lvl+1})`,s:N.lvl>=4?"":`${md(nkStartCost())} · effet immédiat${N.lvl+1===2?" · ⚠️ au niveau 2, l'enrichissement militaire devient possible et le monde le saura":""}`,dis:N.lvl>=4||S.econ.res<nkStartCost(),
+      on:()=>{const c=nkStartCost();if(S.econ.res<c)return;S.econ.res-=c;N.lvl++;S.idx.infra=clamp(S.idx.infra+1);S.boost+=.1;if(S.en)S.en.cap=(S.en.cap||0)*1.03;render();renderPanel()}}));
+  h+=card("💣 Bombe atomique",kv([["Bombes en stock",N.bombs],["En fabrication",N.prod?`encore ${N.prod} jours`:"aucune"],["Coût",md(nkBombCost())],["Temps de fabrication",`${nkDays()} jours`]])
+    +note("Fabriquer la bombe déclenche condamnations et sanctions. Posséder la bombe dissuade : tes ennemis hésitent et ta puissance militaire augmente.")
+    +row({i:"🏭",t:"Fabriquer une bombe",s:!can?"Il faut un réacteur de niveau 2":N.prod?"Une bombe est déjà en fabrication":`${md(nkBombCost())} · ${nkDays()} jours`,dis:!can||N.prod>0||S.econ.res<nkBombCost(),
+      on:()=>confirmM("☢️","Lancer la fabrication ?","Le monde va réagir : relations en chute, sanctions des grandes démocraties, tensions intérieures.","Fabriquer",()=>{const c=nkBombCost();if(S.econ.res<c)return"Trésor insuffisant.";S.econ.res-=c;N.prod=nkDays();nkGlobal();render();renderPanel();return"La fabrication commence."})}));
+  h+=card("🎯 Larguer une bombe atomique",note("Uniquement contre un pays avec lequel tu es en guerre. Conséquences : victoire militaire probable, mais condamnation mondiale totale, sanctions de toutes parts, radiations, colère d'une partie du pays — et riposte nucléaire si la cible est une puissance nucléaire.")
+    +(N.bombs&&wars.length?wars.map(k=>{const c=country(k);return row({i:c.f,t:`Frapper ${art(c)}`,s:NUKE_POW.includes(k)?"⚠️ Puissance nucléaire : riposte presque certaine":"Pas de riposte nucléaire directe",on:()=>confirmM("☢️",`Frapper ${art(c)} ?`,"C'est irréversible. Des centaines de milliers de morts, et ton pays devient un paria.","Larguer la bombe",()=>nkStrike(k))})}).join(""):row({i:"🔒",t:N.bombs?"Tu n'es en guerre avec personne":"Aucune bombe en stock",dis:true})));
+  return{t:"☢️ Armes nucléaires",h}};
+function nkStrike(k){const N=nk(),c=country(k),w=S.wars[k];if(!N.bombs||!w)return"Impossible.";N.bombs--;N.used=(N.used||0)+1;
+  const dead=Math.round(c.pop*1e6*R(.004,.01));fx({dip:{all:-60},idx:{inst:-30,envi:-20},grp:{arm:8,jeun:-25,trav:-10,retr:-8,entr:-15}});
+  for(const b in S.dip)if(S.dip[b]!=null&&b!==k&&(country(b).gdp>300||chance(.4)))S.sancUs[b]=true;S.lowPop=(S.lowPop||0)+6;
+  news(`☢️ Frappe nucléaire contre ${art(c)} : ${nf(dead)} morts. Le monde est sous le choc`);log(`☢️ Tu as largué une bombe atomique sur ${art(c)} (${nf(dead)} morts).`,"Armes nucléaires");
+  if(NUKE_POW.includes(k)&&chance(.8)){endGame("nuke",`${cap(art(c))} riposte avec ses propres armes nucléaires. Ton pays est dévasté : la partie est terminée.`);return null}
+  w.front=clamp(w.front+40);if(w.front>=90)endWar(k,"win");render();return`La frappe dévaste ${art(c)}. Son armée s'effondre, mais ton pays est mis au ban du monde.`}
+const _ds35=dayStep;dayStep=function(){_ds35();const N=S&&S.nuke;if(N&&N.prod>0){N.prod--;if(N.prod===0){N.bombs++;news("☢️ Ton pays possède une nouvelle bombe atomique");if(!AUTO)toast("☢️ Bombe atomique prête","Dissuasion renforcée, tensions mondiales en hausse")}}};
+/* Dissuasion : puissance militaire et moins d'attaques */
+const _mp35=myPow;myPow=function(){return _mp35()+Math.min(30,(S.nuke?S.nuke.bombs:0)*12)};
+const _pa35=PN.army;PN.army=()=>{const r=_pa35();if(r)r.h=row({i:"☢️",t:"Armes nucléaires",s:S.nuke&&S.nuke.bombs?`${S.nuke.bombs} bombe${S.nuke.bombs>1?"s":""} en stock`:"Réacteur, bombe, dissuasion",on:()=>openP("nuke")})+r.h;return r};
+(function(){try{const st=document.createElement("style");st.textContent=".pmap svg{width:100%;height:min(62vh,440px);display:block;background:#0b2340;border-radius:12px}.pcell{cursor:pointer}.pcell:hover{opacity:.85}.plab{font-weight:700;fill:#0b1b33;paint-order:stroke;stroke:#fff}";document.head.appendChild(st)}catch(e){}})();
+
 </script>
 
 </body></html>
