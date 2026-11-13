@@ -338,7 +338,7 @@ const COUNTRIES=[
   C("cm","Cameroun","le","🇨🇲","rep",45,28,.3,.15,.45,.5,.55,.4,5.7,12.5,"afr",["Yaoundé","Douala","Garoua","Bamenda","Bafoussam"],"Afrique"),
   C("ga","Gabon","le","🇬🇦","rep",20,2.4,.4,.2,.5,.55,.6,.45,-.8,11.6,"afr",["Libreville","Port-Gentil","Franceville","Oyem"],"Afrique"),
   C("cg","Congo","le","🇨🇬","rep",13,6,.3,.2,.45,.5,.55,.45,-.7,15,"afr",["Brazzaville","Pointe-Noire","Dolisie","Owando","Nkayi"],"Afrique"),
-  C("cd","RD Congo","la","🇨🇩","rep",65,100,.25,.12,.35,.4,.4,.35,-2.9,23.7,"afr",["Kinshasa","Lubumbashi","Goma","Kisangani","Mbuji-Mayi","Bukavu"],"Afrique"),
+  C("cd","RD Congo","la","🇨🇩","rep",65,100,.25,.12,.35,.4,.4,.35,-2.9,23.7,"afr",["Kinshasa","Lubumbashi","Goma","Kisangani","Mbuji-Mayi","Bukavu","Kananga","Kolwezi","Matadi","Mbandaka","Butembo","Kikwit","Bunia","Kalemie","Kindu","Boma","Tshikapa","Isiro"],"Afrique"),
   C("ao","Angola","l'","🇦🇴","rep",120,35,.35,.18,.45,.45,.55,.4,-12,17.5,"pt",["Luanda","Huambo","Lobito","Benguela"],"Afrique"),
   C("rw","Rwanda","le","🇷🇼","rep",14,14,.25,.16,.55,.55,.75,.55,-2,29.9,"afr",["Kigali","Huye","Rubavu","Musanze"],"Afrique"),
   C("ke","Kenya","le","🇰🇪","rep",110,55,.3,.17,.5,.6,.55,.5,.2,37.9,"en",["Nairobi","Mombasa","Kisumu","Nakuru","Eldoret"],"Afrique"),
@@ -563,7 +563,7 @@ function newState(o){const c=country(o.cid);const regime=o.regime||c.reg;const R
   else if(st==="recession"){S.econ.g=R(-2,-.8);S.econ.unemp+=4;GROUPS.forEach(([k])=>S.grp[k]-=5)}
   else if(st==="crise"){S.econ.g=R(-4,-2.5);S.econ.inf=R(12,20);S.econ.unemp+=7;S.econ.debt+=gdp*.3;GROUPS.forEach(([k])=>S.grp[k]-=10);S.idx.inst-=8}
   syncTax();S.econ.rating=rating();
-  S.regions=c.cities.slice(0,6).map((n,i)=>({n:i===0?`Capitale (${n})`:`Région de ${n}`,city:n,pop:i===0?.24:R(.08,.16),rural:i>2,ap:RI(45,62),dev:clamp(Math.round(eco*55+15)+(i===0?12:-RI(0,12))),unrest:RI(5,20),mod:0}));
+  S.regions=c.cities.slice(0,CITYMAX[c.id]||6).map((n,i)=>({n:i===0?`Capitale (${n})`:`Région de ${n}`,city:n,pop:CITYPOP[c.id]?CITYPOP[c.id][i]:i===0?.24:R(.08,.16),rural:i>2,ap:RI(45,62),dev:clamp(Math.round(eco*55+15)+(i===0?12:-RI(0,12))),unrest:RI(5,20),mod:0}));
   S.regions.push({n:"Zones rurales",city:"campagnes",pop:.25,rural:true,ap:RI(40,60),dev:clamp(Math.round(eco*40+10)),unrest:RI(10,25),mod:0});
   const tot=S.regions.reduce((s,r)=>s+r.pop,0);S.regions.forEach(r=>r.pop/=tot);
   S.mins=MINS.map(([k])=>mkMin(k));
@@ -1241,6 +1241,7 @@ function monthStep(){for(let i=0;i<30&&S&&!S.over;i++){dayStep();if(MCUR&&!AUTO)
 
 /* ---------- Géographie : villes, routes, aéroports, ports, habitants ----------
    Coordonnées approximatives des villes (latitude, longitude, accès à l'eau : 1 = mer, 2 = fleuve ou lac). */
+const CITYMAX={cd:18},CITYPOP={cd:[17,2.6,1.0,1.4,2.8,1.1,1.6,.6,.5,.5,.9,.6,.9,.3,.3,.3,.9,.3].map((v,i,A)=>i===0?.24:.51*v/(A.reduce((a,x)=>a+x,0)-A[0]))};
 const CITYLL={
 fr:[[48.86,2.35,2],[45.76,4.84,2],[43.30,5.37,1],[50.63,3.06,0],[44.84,-.58,1],[43.60,1.44,0]],de:[[52.52,13.40,2],[48.14,11.58,0],[53.55,9.99,1],[50.94,6.96,2],[50.11,8.68,2]],
 it:[[41.90,12.50,0],[45.46,9.19,0],[40.85,14.27,1],[45.07,7.69,0],[38.12,13.36,1]],es:[[40.42,-3.70,0],[41.39,2.17,1],[37.39,-5.98,2],[39.47,-.38,1],[43.26,-2.93,1]],
@@ -1260,7 +1261,7 @@ dz:[[36.75,3.06,1],[35.70,-.63,1],[36.37,6.61,0],[36.90,7.77,1],[31.95,5.33,0]],
 sn:[[14.72,-17.47,1],[14.79,-16.93,0],[16.02,-16.49,1],[12.58,-16.27,1],[14.15,-16.07,2]],ml:[[12.64,-8.00,2],[11.32,-5.67,0],[13.43,-6.26,2],[14.49,-4.20,2],[16.27,-.04,2]],
 ci:[[6.83,-5.29,0],[5.36,-4.01,1],[7.69,-5.03,0],[4.75,-6.64,1],[9.46,-5.63,0]],ng:[[9.08,7.40,0],[6.52,3.38,1],[12.00,8.52,0],[7.38,3.95,0],[4.82,7.03,1]],
 cm:[[3.85,11.50,0],[4.05,9.70,1],[9.30,13.40,2],[5.96,10.15,0],[5.48,10.42,0]],ga:[[.42,9.47,1],[-.72,8.78,1],[-1.63,13.58,0],[1.60,11.58,0]],
-cg:[[-4.27,15.28,2],[-4.78,11.86,1],[-4.20,12.67,0],[-.48,15.90,2],[-4.18,13.29,0]],cd:[[-4.44,15.27,2],[-11.66,27.48,0],[-1.68,29.22,2],[.52,25.19,2],[-6.14,23.59,0],[-2.51,28.86,2]],
+cg:[[-4.27,15.28,2],[-4.78,11.86,1],[-4.20,12.67,0],[-.48,15.90,2],[-4.18,13.29,0]],cd:[[-4.44,15.27,2],[-11.66,27.48,0],[-1.68,29.22,2],[.52,25.19,2],[-6.14,23.59,0],[-2.51,28.86,2],[-5.90,22.42,0],[-10.71,25.47,0],[-5.82,13.45,1],[.05,18.26,2],[.14,29.29,0],[-5.04,18.82,0],[1.56,30.25,0],[-5.95,29.19,2],[-2.94,25.92,2],[-5.85,13.05,1],[-6.42,20.80,0],[2.77,27.62,0]],
 ao:[[-8.84,13.23,1],[-12.78,15.74,0],[-12.36,13.54,1],[-12.58,13.41,1]],rw:[[-1.95,30.06,0],[-2.60,29.74,0],[-1.68,29.26,2],[-1.50,29.63,0]],
 ke:[[-1.29,36.82,0],[-4.04,39.67,1],[-.09,34.77,2],[-.30,36.07,0],[.51,35.27,0]],et:[[9.03,38.74,0],[9.59,41.87,0],[13.50,39.47,0],[12.60,37.47,0],[11.59,37.39,2]],
 za:[[-25.75,28.19,0],[-26.20,28.05,0],[-33.92,18.42,1],[-29.86,31.02,1],[-33.96,25.60,1]],pl:[[52.23,21.01,2],[50.06,19.94,2],[51.76,19.46,0],[51.11,17.04,2],[54.35,18.65,1]],
@@ -6745,8 +6746,11 @@ const PVCOL=["#d9e8c8","#b9dba0","#8ec97a","#5fb35a","#3a9a4b","#24763b","#14532
 function provVal(i){const p=S.prov[i],r=S.regions[i];switch(ui.pact){case"fisc":return p.fisc/100;case"inf":return p.inf/PMAX(r);case"pg":return .2+p.pg*.8;default:return Math.min(1,p.eco/16)}}
 function provMap(){const G=provGeo();if(!G)return"";const sw=G.vb[2]/220;
   const cells=G.cells.map(c=>{const v=provVal(c.i),col=PVCOL[Math.min(PVCOL.length-1,Math.floor(v*PVCOL.length))];return`<path d="M${c.poly.map(p=>p[0].toFixed(2)+","+p[1].toFixed(2)).join("L")}Z" fill="${col}" stroke="#123" stroke-width="${sw}" data-h="${hb(()=>provDo(ui.pact,c.i))}" class="pcell"/>`}).join("");
-  const labels=G.cells.filter(c=>!c.rural).map(c=>{const p=S.prov[c.i],a=PACT.find(q=>q.k===ui.pact)||PACT[0];const ic=depsOf(c.i).slice(0,3).map(d=>(prodDef(d.k)||{}).i||"⛏️").join("");const rr=RR[p.res]||["",""];
-    return`<g pointer-events="none"><circle cx="${c.x}" cy="${c.y}" r="${sw*2.2}" fill="#fff" stroke="#123" stroke-width="${sw*.6}"/><text x="${c.x}" y="${c.y-sw*3.5}" font-size="${sw*7}" text-anchor="middle" class="plab" stroke-width="${sw*1.2}">${esc(S.regions[c.i].city)} · ${a.lvl(p,c.i)}</text><text x="${c.x}" y="${c.y+sw*8.5}" font-size="${sw*7}" text-anchor="middle">${rr[0]}${ic}</text></g>`}).join("");
+  const urb=G.cells.filter(c=>!c.rural),k=Math.max(.8,Math.min(1,Math.sqrt(8/Math.max(1,urb.length)))),fs=sw*7*k,placed=[];
+  const labels=urb.sort((x,y)=>x.y-y.y).map(c=>{const p=S.prov[c.i],a=PACT.find(q=>q.k===ui.pact)||PACT[0];const nIc=urb.length>10?1:3;const ic=depsOf(c.i).slice(0,nIc).map(d=>(prodDef(d.k)||{}).i||"⛏️").join("");const rr=RR[p.res]||["",""];
+    const nm=`${esc(S.regions[c.i].city)} · ${a.lvl(p,c.i)}`,w=nm.length*fs*.55;let up=true;const hit=yy=>placed.some(q=>Math.abs(q.x-c.x)<(q.w+w)/2&&Math.abs(q.y-yy)<fs*1.1);
+    let ly=c.y-sw*3*k;if(hit(ly)){ly=c.y+fs*1.4;up=false;if(hit(ly)){ly=c.y-fs*1.6}}placed.push({x:c.x,y:ly,w});const iy=up?c.y+fs*1.5:ly+fs*1.1;
+    return`<g pointer-events="none"><circle cx="${c.x}" cy="${c.y}" r="${sw*2*k}" fill="#fff" stroke="#123" stroke-width="${sw*.5}"/><text x="${c.x}" y="${ly}" font-size="${fs}" text-anchor="middle" class="plab" stroke-width="${sw*1.1*k}">${nm}</text><text x="${c.x}" y="${iy}" font-size="${fs*.9}" text-anchor="middle">${rr[0]}${ic}</text></g>`}).join("");
   const rl=G.cells.filter(c=>c.rural).map(c=>`<text x="${c.x}" y="${c.y}" font-size="${sw*6}" text-anchor="middle" pointer-events="none" class="plab" stroke-width="${sw*1.2}">Campagnes</text>`).join("");
   return`<div class="pmap"><svg viewBox="${G.vb.join(" ")}" preserveAspectRatio="xMidYMid meet"><defs><clipPath id="pclip"><path d="${G.path}"/></clipPath></defs><g clip-path="url(#pclip)">${cells}</g><path d="${G.path}" fill="none" stroke="#0b1b33" stroke-width="${sw*1.4}"/>${labels}${rl}</svg></div>`
     +note("Touche une province sur la carte (ou dans la liste) pour appliquer l'action choisie. Plus la couleur est foncée, plus le niveau est élevé.")}
@@ -6785,6 +6789,12 @@ const _ds35=dayStep;dayStep=function(){_ds35();const N=S&&S.nuke;if(N&&N.prod>0)
 const _mp35=myPow;myPow=function(){return _mp35()+Math.min(30,(S.nuke?S.nuke.bombs:0)*12)};
 const _pa35=PN.army;PN.army=()=>{const r=_pa35();if(r)r.h=row({i:"☢️",t:"Armes nucléaires",s:S.nuke&&S.nuke.bombs?`${S.nuke.bombs} bombe${S.nuke.bombs>1?"s":""} en stock`:"Réacteur, bombe, dissuasion",on:()=>openP("nuke")})+r.h;return r};
 (function(){try{const st=document.createElement("style");st.textContent=".pmap svg{width:100%;height:min(62vh,440px);display:block;background:#0b2340;border-radius:12px}.pcell{cursor:pointer}.pcell:hover{opacity:.85}.plab{font-weight:700;fill:#0b1b33;paint-order:stroke;stroke:#fff}";document.head.appendChild(st)}catch(e){}})();
+
+/* ===== v36 — Plus de villes en RD Congo, avec leurs ressources et gisements ===== */
+const RRCITY={cd:["poisson","mais","cafe","bois","manioc","the","coton","mais","bananes","huile_palme","cafe","huile_palme","betail","poisson","riz","cacao","manioc","caoutchouc"]};
+RES_AUTH.cd=[["cobalt",7,7],["cobalt",1,5],["cuivre",7,6],["cuivre",1,6],["diamant",4,1.2],["diamant",16,.5],["or",12,1],["or",5,.6],["or",3,.4],["coltan",2,.6],["coltan",14,.4],
+  ["petrole",15,.5],["manganese",1,.5],["zinc",1,.5],["lithium",13,.4],["uranium",1,.2],["germanium",1,.15],["etain",14,.5],["etain",5,.3],["tungstene",5,.1],["gaz",2,.1]];
+const _pi36=provInit;provInit=function(s){_pi36(s);const L=RRCITY[s.cid];if(L&&s.prov)s.prov.forEach((p,i)=>{if(!s.regions[i].rural&&L[i])p.res=L[i]})};
 
 </script>
 
