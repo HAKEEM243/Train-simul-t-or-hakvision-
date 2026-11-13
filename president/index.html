@@ -622,8 +622,8 @@ function tick(){if(!S||S.over)return;S.tm++;S.month++;if(S.month>11){S.month=0;S
   const resG={petrole:(W.oil-80)/80*1.2,mines:(W.metal-100)/100*.8,tech:.4,tourisme:.3-(nWar?1:0),agri:0,aucune:0}[S.res]||0;
   const tG=baseG+(B.infra-14)*.06+(B.education-16)*.03+dealG(nDeals)-sancPen()+(S.deficit==="relance"?.8:S.deficit==="austerite"?-.6:0)+S.boost-(I.corr-30)/60+(mc("finances")-50)/60-(debtRatio()>1.2?.8:0)
     +(W.g-3)*.35+resG+(S.union?.3:0)-(T0.is-.05)*12-(T0.dou-.025)*25-(T0.ir-.09)*4-(S.cb.rate-3)*.2-nWar*.8+(ideoDef().gr||0)+(S.labG||0)+(S.eco3?orgGrowth():0)+(S.enG||0)+(S.digG||0)+(S.linkG||0)+(S.bopG||0)+(S.invG||0);
-  E.g+=(tG-E.g)*.12+R(-.15,.15);S.boost*=.92;
-  const tInf=infTarget();E.inf+=(tInf-E.inf)*.1+R(-.1,.1);
+  E.g+=R(-.15,.15);S.boost*=.92;
+  const tInf=infTarget();E.inf+=R(-.1,.1);
   if(S.cb.ind)S.cb.rate=clamp(S.cb.rate+((2+(E.inf-2)*1.2)-S.cb.rate)*.08,0,25);
   const tU=clamp(8+(1-Math.min(S.eco,1.2))*9-(E.g-2)*1.5+(S.labMod||0),1.5,45);if(S.lm)laborMonth();else E.unemp=clamp(E.unemp+(tU-E.unemp)*.06+R(-.1,.1),2,45);
   E.gdp*=1+(E.g+E.inf)/1200;
@@ -1813,7 +1813,7 @@ function lmJobs(){const m=S.lm,L=S.lab,L0=S.lab0,E=S.econ;const smr=L.smig/L.avg
 function lmRate(){const LF=lmLF(),J=lmJobs();return clamp((LF-J.total)/LF*100+(lmFric()-S.lm.fr0),1.5,60)}
 function laborMonth(){const m=S.lm,E=S.econ,L=S.lab;if(m.vis0===1&&typeof visitors==="function")m.vis0=Math.max(.05,visitors());
   m.retireK=clamp((L.retire-S.lab0.retire)*-.006,-.05,.08);m.pf=clamp(m.pf+(.002*m.creche)+(S.laws.includes("parite")?.0005:0),.2,.85);m.shock*=.97;m.rg=(m.rg||1)*(1+E.g/1200);m.pi=(m.pi||1)*(1+prodTrend()/1200);
-  const J=lmJobs();const u=lmRate();E.unemp=clamp(E.unemp+(u-E.unemp)*.25+R(-.08,.08),1.5,60);m.u=u;
+  const J=lmJobs();const u=lmRate();E.unemp=clamp(E.unemp+R(-.08,.08),1.5,60);m.u=u;
   const cur={A:J.A,P:J.P,Sv:J.Sv,C:J.C,T:J.T,...J.ind};if(m.prev){let c=0,d=0;for(const k in cur){const dv=cur[k]-(m.prev[k]||0);if(dv>0)c+=dv;else d-=dv}m.flows={c,d}}m.prev=cur;
   m.wnom=L.avg;m.wreal=m.wreal*(1+(E.g/100+E.inf/100)/12)/(1+E.inf/1200);
   if(S.month===0||!m.hist.length)m.hist.push({y:S.year,u:E.unemp,j:J.total,lf:lmLF()});if(m.hist.length>40)m.hist.shift();
@@ -2743,7 +2743,7 @@ function renderSetup(){H=[];const st=DS.step;const steps=["Pays","Régime","Éco
     note("Dans les deux modes, l'éditeur du menu ☰ permet de modifier les finances, l'opinion ou le régime à tout moment.")+
     `<div class="actions"><button class="btn go" type="button" data-h="${hb(()=>{S=newState(DS);welcome()})}">Prendre mes fonctions</button></div>`}
   $("#scr-setup").innerHTML=`<div class="pbar"><button class="circ" type="button" data-h="${hb(back)}" aria-label="Retour">‹</button><h2>${title}</h2><span class="circ ghost"></span></div><div class="steps">${steps.map((s,i)=>`<span class="${i===st?"on":i<st?"done":""}">${s}</span>`).join("")}</div><div class="pbody">${body}</div>`}
-function welcome(){save();showGame();const c=home();modal({i:c.f,title:`${title()} ${du(c)}`,text:`Bienvenue au palais, ${esc(S.me.first)}. Tu diriges ${art(c)} : <b>${RNAME[S.regime].toLowerCase()}</b>.<br><br>Chaque mois, tu disposes de <b>3 actions d'agenda</b>, et des dossiers arrivent sur ton bureau. Appuie sur <b>Mois suivant</b> pour faire avancer le temps.<br><br>Explore les onglets : la carte du monde, l'état du pays, le budget et les impôts, ton équipe et tes grands projets.`,ch:[{l:"Au travail"}]})}
+function welcome(){save();showGame();const c=home();modal({i:c.f,title:`${title()} ${du(c)}`,text:`Bienvenue au palais, ${esc(S.me.first)}. Tu diriges ${art(c)} : <b>${RNAME[S.regime].toLowerCase()}</b>.<br><br>Chaque mois, tu disposes de <b>3 actions d'agenda</b>, et chacune de tes décisions a des effets immédiats sur le pays. Appuie sur <b>Mois suivant</b> pour faire avancer le temps.<br><br>Explore les onglets : la carte du monde, l'état du pays, le budget et les impôts, ton équipe et tes grands projets.`,ch:[{l:"Au travail"}]})}
 function showGame(){show("game");ui.tab=ui.tab||"bureau";render()}
 
 /* ---------- Écran de jeu ---------- */
@@ -2927,7 +2927,7 @@ PN.fortune=()=>{const m=S.me;const sal=Math.round(150000*Math.max(S.eco,.3)*m.sa
     +sec("Ton argent")+row({i:m.invest?"✅":"⬜",t:"Placer ta fortune",s:"+4 % par an, mais un risque de polémique sur tes placements",on:()=>{m.invest=!m.invest;renderPanel()}})
     +row({i:"🎗️",t:"Donner 10 % de ta fortune à une œuvre",s:m.money>0?`${eur(m.money*.1)} pour les hôpitaux et les écoles`:"Pas assez d'argent",dis:m.money<=0,on:()=>{const v=Math.round(m.money*.1);m.money-=v;fx({all:2,idx:{sante:1}});log(`🎗️ Don de ${eur(v)} à une fondation.`);info("🎗️","Don","Ton geste est salué par la presse.")}})}};
 PN.journal=()=>({t:"Journal",h:S.log.slice().reverse().map(l=>`<div class="logl"><span>${l.d}</span>${l.t}${l.why?`<em>↳ ${l.why}</em>`:""}</div>`).join("")});
-PN.help=()=>({t:"Comment jouer",h:note("<b>Le temps</b> avance mois par mois. Chaque mois, tu as 3 actions d'agenda et des dossiers arrivent sur ton bureau. Tous les trois mois, un Conseil des ministres t'attend. Le menu ☰ permet d'avancer de plusieurs mois.")
+PN.help=()=>({t:"Comment jouer",h:note("<b>Le temps</b> avance mois par mois. Chaque mois, tu as 3 actions d'agenda ; tout ce que tu touches change le pays dès le jour même. Le menu ☰ permet d'avancer plus vite.")
   +note("<b>Le Bureau</b> : agenda, gros titres, popularité, échéances, vie privée.<br><b>Le Monde</b> : la carte (zoom par continent), la guerre, l'économie mondiale, les organisations et la diplomatie. Touche un pays pour agir.<br><b>Le Pays</b> : économie, historique, indicateurs, opinion des groupes, régions.<br><b>Le Budget</b> : impôts un par un, dépenses, banque centrale, dette, réserves, entreprises publiques.<br><b>L'Équipe</b> : ministres, Parlement, opposition, Constitution, lois.<br><b>Les Projets</b> : grands chantiers sur plusieurs années.")
   +note("<b>Huit régimes</b> : république présidentielle ou semi-présidentielle, régime parlementaire, monarchie constitutionnelle ou absolue, régime autoritaire, junte militaire, parti unique. Chacun a ses règles : élections, censure, congrès, révoltes, coups d'État, succession royale.")
   +note("<b>Tu perds</b> si tu es battu aux élections, renversé par un coup d'État ou une révolution, censuré par le Parlement, vaincu à la guerre… ou si ta santé lâche (en monarchie absolue, ton héritier peut prendre la relève). À la fin, le jeu dresse le bilan de ton passage au pouvoir.")
@@ -2970,9 +2970,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#panel").hidden
 
 
 /* ---------- Menu ☰ ---------- */
-PN.menu=()=>({t:"Menu",h:sec("Le temps")+row({i:"⏩",t:"Avancer de 3 mois",s:"S'arrête dès qu'un dossier arrive sur ton bureau",on:()=>{closeP();advance(3)}})
-  +row({i:"⏭️",t:"Avancer de 6 mois",s:"S'arrête dès qu'un dossier arrive sur ton bureau",on:()=>{closeP();advance(6)}})
-  +row({i:"📅",t:"Avancer d'un an",s:"S'arrête dès qu'un dossier arrive sur ton bureau",on:()=>{closeP();advance(12)}})
+PN.menu=()=>({t:"Menu",h:sec("Le temps")+row({i:"⏩",t:"Avancer de 3 mois",s:"S'arrête en cas d'événement décisif (coup d'État, révolution…)",on:()=>{closeP();advance(3)}})
+  +row({i:"⏭️",t:"Avancer de 6 mois",s:"S'arrête en cas d'événement décisif (coup d'État, révolution…)",on:()=>{closeP();advance(6)}})
+  +row({i:"📅",t:"Avancer d'un an",s:"S'arrête en cas d'événement décisif (coup d'État, révolution…)",on:()=>{closeP();advance(12)}})
   +sec("Outils")+row({i:"🛠️",t:"Éditeur",s:"Modifier les finances, l'opinion, le régime…",on:()=>openP("editor")})
   +sec("Partie")+row({i:"💾",t:"Sauvegardes",s:"Emplacements, en ligne, fichier",on:()=>openP("saves")})+row({i:"📖",t:"Journal complet",on:()=>openP("journal")})+row({i:"❓",t:"Comment jouer",on:()=>openP("help")})
   +row({i:"🚪",t:"Démissionner",s:"Mettre fin à ta partie",on:()=>confirmM("🚪","Démissionner ?","Tu quittes le pouvoir. Le jeu dressera le bilan de ton passage.","Démissionner",()=>{closeP();endGame("demission","Tu annonces ta démission dans une allocution solennelle.")})})
@@ -6289,7 +6289,7 @@ TOUR.splice(0,TOUR.length,
   ["👋","Bienvenue","Tu diriges un pays. Chaque mois, tes décisions changent la vie de millions de personnes. Ton but : rester au pouvoir et améliorer la vie de tes citoyens. Rien n'est automatique : chaque choix a des effets, parfois des mois plus tard."],
   ["🧭","La barre du bas : 5 espaces","🏛️ Palais : gouverner (dossiers, ministres, lois). 💰 Économie : budget, entreprises, ressources, ménages. 🌍 Monde : pays, guerres, téléphone, migrations. 🗺️ Territoire : la carte et les grands chantiers. 👤 Président : ta popularité, ta sécurité, ta famille."],
   ["📑","Les onglets du haut","Dans chaque espace, une ligne d'onglets en haut donne accès aux différentes parties. Fais-la glisser du doigt si elle dépasse de l'écran."],
-  ["📋","Chaque mois, ton Bureau","La carte « Que faire maintenant ? » te guide pas à pas. Les dossiers à trancher arrivent avec une pastille rouge. Tu as 3 actions d'agenda par mois."],
+  ["📋","Chaque mois, ton Bureau","La carte « Que faire maintenant ? » te guide pas à pas. Chaque décision a un effet immédiat, affiché en haut de l'écran. Tu as 3 actions d'agenda par mois."],
   ["⏯️","Le temps","« Mois suivant », en bas à droite, fait avancer d'un mois. Les boutons ⏸ ▶ ⏩ font défiler le temps tout seul : il s'arrête quand une décision t'attend."],
   ["📊","Comprendre les chiffres","Touche un chiffre en haut de l'écran (popularité, croissance, chômage, inflation) : un graphe te montre pourquoi il monte ou baisse, et où agir."],
   ["🔍","Perdu ?","La loupe 🔍 en haut à droite cherche n'importe quel écran. Le ❓ explique le jeu. Le menu ☰ en bas à gauche contient les sauvegardes et les réglages. Pour une décision importante, touche deux fois le même bouton."],
@@ -6297,7 +6297,7 @@ TOUR.splice(0,TOUR.length,
 const _wel28=welcome;welcome=function(){if(!lsGet("president:tour2")){lsDel("president:tour");lsSet("president:tour2","1")}_wel28()};
 
 /* ===== 3. Toujours savoir où aller : loupe et aide dans le bandeau, explications par onglet ===== */
-const HINTS={bureau:"Ton point de départ chaque mois : urgences, dossiers à trancher et 3 actions d'agenda.",conseil:"Réunis tes ministres une fois par mois : rapports, propositions, disputes à arbitrer.",
+const HINTS={bureau:"Ton point de départ chaque mois : urgences, priorités et 3 actions d'agenda.",conseil:"Réunis tes ministres une fois par mois : rapports, propositions, disputes à arbitrer.",
   equipe:"Ton parti, tes conseillers, le Parlement, les médias et les lois.",inst:"Constitution, Parlement, référendum, état d'urgence : les règles du pouvoir.",min:"Le budget de chaque ministère et les grandes orientations de l'État.",
   eco:"Trésor, impôts, monnaie, industries, ressources et entreprises.",tdb:"Tous les indicateurs économiques, et pourquoi ils bougent.",menages:"Le budget de neuf familles types : l'effet concret de tes décisions.",
   travail:"Emploi, salaires, aides sociales, retraites et immigration.",monde:"La carte du monde, les relations, les guerres et les organisations.",tel:"Les dirigeants étrangers t'appellent : réponds, négocie, ou appelle-les.",
@@ -6566,6 +6566,43 @@ const _bur32=TAB.bureau;TAB.bureau=()=>{const h=_bur32();const R=S.yrep;if(!R||R
 const _tdb32=TAB.tdb;TAB.tdb=()=>{const h=_tdb32();return S.yrep?card("",row({i:"📅",t:`Revoir le bilan de l'année ${S.yrep.y}`,s:"Ce qui a changé et pourquoi",on:()=>openP("bilan")}))+h:h};
 const _ns32=newState;newState=function(){const s=_ns32.apply(this,arguments);const keep=S;S=s;try{yrSnap()}catch(e){}finally{S=keep}return s};
 const _mg32=migrate;migrate=function(s){_mg32(s);if(!s.ysnap){const keep=S;S=s;try{yrSnap()}catch(e){}finally{S=keep}}return s};
+
+/* ===== v33 — Jeu d'actions comme Power & Revolution : plus de messages à traiter, effets le jour même ===== */
+/* 1. Plus de dossiers ni d'événements à lire et répondre. Seuls restent les moments décisifs du pouvoir. */
+const KEEPD=new Set(["coup","revolution","destit","contest","censure","censure_loi"]);
+pickDossiers=function(){};
+const _dl33=deliver;deliver=function(d){if(KEEPD.has(d.id))return _dl33(d);
+  if(d.id==="budget_vote"){try{const o=d.make();const c=o&&o.ch&&o.ch[0];if(c&&c.f){const r=c.f();normBud();if(typeof r==="string"){log(`🧾 Budget ${S.year+1} : ${r}`,"Vote du budget");news(`🧾 ${r}`);toast("🧾 Budget",r)}}}catch(e){}}};
+/* Les appels des dirigeants restent des occasions dans le téléphone, sans notification ni pénalité si tu ne réponds pas */
+const _tm33=telMonth;telMonth=function(){const T=S.tel;const keep=T?T.calls.map(c=>({...c})):[];const A=AUTO;AUTO=true;try{_tm33()}finally{AUTO=A}
+  if(S.tel)for(const c of keep)if(!S.tel.calls.some(q=>q.id===c.id)&&S.tm-c.tm>=2){S.dip[c.c]=clamp(S.dip[c.c]+1);if(S.tel.msgs&&S.tel.msgs.length&&/Appel manqué/.test(S.tel.msgs[S.tel.msgs.length-1].t||""))S.tel.msgs.pop()}};
+if(typeof S!=="undefined"&&S&&S.inbox)S.inbox=[];
+/* 2. L'économie réagit chaque jour (et non plus une fois par mois) */
+function gTgt(){try{return growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){return S.econ.g}}
+function dayEcon(){const E=S.econ;if(!E)return;E.g+=(gTgt()-E.g)*.00425;try{E.inf+=(infTarget()-E.inf)*.0035}catch(e){}
+  if(S.lm){try{E.unemp=clamp(E.unemp+(lmRate()-E.unemp)*.0095,1.5,60)}catch(e){}}}
+const _ds33=dayStep;dayStep=function(){_ds33();if(S&&!S.over)dayEcon()};
+/* 3. Chaque action affiche tout de suite ce qu'elle change, y compris la direction que prend l'économie */
+const _sn33=snap;snap=function(){const o=_sn33();if(!o)return o;o.gT=gTgt();try{o.uT=S.lm?lmRate():S.econ.unemp}catch(e){o.uT=S.econ.unemp}try{o.iT=infTarget()}catch(e){o.iT=S.econ.inf}o.pop=popularity();return o};
+const _cd33=consDiff;consDiff=function(a,b){const L=_cd33(a,b);if(!a||!b||a.gT==null)return L;const pre=[];
+  const dp=b.pop-a.pop;if(Math.abs(dp)>=1)pre.push([`⭐ Popularité ${dp>0?"+":"−"}${Math.abs(dp)} pt`,dp>0]);
+  const dg=b.gT-a.gT;if(Math.abs(dg)>=.05)pre.push([`📈 Croissance ${dg>0?"↗":"↘"} ${dg>0?"+":"−"}${nf(Math.abs(dg),1)} pt (s'applique dès aujourd'hui)`,dg>0]);
+  const du=b.uT-a.uT;if(Math.abs(du)>=.05)pre.push([`💼 Chômage ${du>0?"↗":"↘"} ${du>0?"+":"−"}${nf(Math.abs(du),1)} pt (dès aujourd'hui)`,du<0]);
+  const di=b.iT-a.iT;if(Math.abs(di)>=.05)pre.push([`🛒 Inflation ${di>0?"↗":"↘"} ${di>0?"+":"−"}${nf(Math.abs(di),1)} pt`,di<0]);
+  return pre.concat(L)};
+/* Flèches de tendance dans l'en-tête : où va chaque indicateur */
+function trendTag(cur,tgt,goodUp){const d=tgt-cur;if(Math.abs(d)<.1)return"";const up=d>0;return`<i class="trd ${(goodUp?up:!up)?"pos":"neg"}">${up?"↗":"↘"}</i>`}
+const _rd33=render;render=function(){_rd33();try{if(!S||!S.econ)return;const E=S.econ;const chips=document.querySelectorAll("#hdr .chip");
+  for(const c of chips){const k=((c.querySelector("small")||{}).textContent||"").toLowerCase();const old=c.querySelector(".trd");if(old)old.remove();let t="";const tg=c.querySelector("b")||c;
+    if(/croiss/.test(k))t=trendTag(E.g,gTgt(),true);else if(/chômage/.test(k)&&S.lm)t=trendTag(E.unemp,lmRate(),false);else if(/infl/.test(k))t=trendTag(E.inf,infTarget(),false);if(t)tg.insertAdjacentHTML("beforeend",t)}}catch(e){}};
+(function(){try{const st=document.createElement("style");st.textContent=".trd{font-style:normal;font-weight:800;margin-left:3px}.trd.pos{color:var(--good)}.trd.neg{color:var(--bad)}";document.head.appendChild(st)}catch(e){}})();
+/* 4. Plus de boîte de réception de dossiers : on la vide dans les anciennes parties */
+const _mg33=migrate;migrate=function(s){_mg33(s);s.inbox=[];return s};
+/* 5. Trésor qui déborde : l'excédent au-delà de 10 % du PIB rembourse la dette (désactivable dans « Dette et réserves ») */
+function autoRepay(){const E=S.econ;if(!E||(S.flags&&S.flags.noRepay))return;const x=E.res-E.gdp*.10;if(x<=0||E.debt<=0)return;const v=Math.min(E.debt,x*.08);E.res-=v;E.debt-=v;S.repY=(S.repY||0)+v}
+const _lk33=linksMonth;linksMonth=function(){_lk33();autoRepay();if(S.month===0)S.repY=0};
+const _pd33=PN.dette;PN.dette=()=>{const r=_pd33();if(!r)return r;const on=!(S.flags&&S.flags.noRepay);
+  r.h=card("🏦 Remboursement automatique",row({i:on?"✅":"⏸️",t:on?"Activé : l'excédent du trésor rembourse la dette":"Désactivé : le trésor garde tout",s:`Au-delà de 10 % du PIB en caisse · remboursé cette année : ${md(S.repY||0)} · touche pour ${on?"désactiver":"activer"}`,on:()=>{S.flags=S.flags||{};S.flags.noRepay=on;render();renderPanel()}}))+r.h;return r};
 
 </script>
 
