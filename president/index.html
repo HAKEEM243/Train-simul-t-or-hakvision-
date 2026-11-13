@@ -6515,7 +6515,7 @@ const _mg31b=migrate;migrate=function(s){_mg31b(s);if(s.eco0==null)s.eco0=s.eco;
 /* Gains de productivité : calés au départ sur la croissance et la démographie du pays,
    pour que le chômage ne dérive pas tout seul quand on ne fait rien. Ensuite, seules tes décisions le font bouger. */
 function popGrowthNow(){let g=natGrowth();try{if(typeof migRate==="function"){const r=migRate();g+=r.reg+r.irr+r.ref}if(typeof emigRate==="function")g-=emigRate()}catch(e){}return g}
-function prodTrend(){const m=S.lm;if(m.pT==null){let g=2;try{g=growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){}const pg=popGrowthNow();let sA=0,sS=.6,sI=.2;try{const J=lmJobs(),t=Math.max(1e-6,J.total);sA=J.A/t;sS=J.Sv/t;sI=J.I/t}catch(e){}m.pT=clamp(g-pg*(1-.5*sA-.25*sS)/Math.max(.15,.85*sS+.25*sI),0,5)}return m.pT}
+function prodTrend(){const m=S.lm;if(m.pT==null){let g=2;try{g=growthTerms().reduce((a,t)=>a+t[2],0)}catch(e){}const pg=popGrowthNow();let sA=0,sS=.6,sI=.2;try{const J=lmJobs(),t=Math.max(1e-6,J.total);sA=J.A/t;sS=J.Sv/t;sI=J.I/t}catch(e){}m.pT=clamp(g-pg*(1-.5*sA-.25*sS)/Math.max(.15,.85*sS+.25*sI),-2,5)}return m.pT}
 /* Garde-fous du marché du travail : quand le chômage tombe très bas, les salaires montent et les embauches ralentissent ;
    quand il explose, les salaires baissent et les embauches repartent. Entre les deux, rien ne bouge : tes décisions comptent. */
 const _lj31=lmJobs;lmJobs=function(){const J=_lj31();const a=S.lm&&S.lm.wadj||0;const W=a*J.Sv;J.W=W;J.total=Math.max(0,J.total+W);return J};
@@ -6538,6 +6538,34 @@ function potG(){if(S.gCal==null){if(POTG[S.cid]==null)return 1+2.5*(1-Math.min(S
 const _ns31d=newState;newState=function(){const s=_ns31d.apply(this,arguments);const keep=S;S=s;try{s.gCal=null;potG()}finally{S=keep}return s};
 const _mg31d=migrate;migrate=function(s){_mg31d(s);if(s.gCal===undefined)s.gCal=1+2.5*(1-Math.min(s.eco,1.2)*.6);
   if(s.cid==="kp"&&s.dip0)for(const b of["us","jp","kr","fr","gb","de"])if(s.dip0[b]!=null)s.dip0[b]=Math.min(s.dip0[b],15);return s};
+
+/* ===== v32 — Bilan de l'année : ce qui a changé et pourquoi ===== */
+const yrKey=l=>String(l).split(" : ")[0];
+function yrTerms(f){try{return f().map(t=>[t[0],yrKey(t[1]),t[2]])}catch(e){return[]}}
+function yrDipAvg(){const v=Object.values(S.dip||{});return v.length?v.reduce((a,x)=>a+x,0)/v.length:50}
+function yrSnap(){S.ysnap={y:S.year,v:digVals(),g:yrTerms(growthTerms),u:yrTerms(unempTerms),dip:yrDipAvg(),debt:debtRatio()*100}}
+function yrDiff(a,b){const m={};for(const t of a)m[t[1]]=t[2];const seen={};const out=[];
+  for(const t of b){seen[t[1]]=1;const d=t[2]-(m[t[1]]||0);if(Math.abs(d)>=.1)out.push([t[0],t[1],d])}
+  for(const t of a)if(!seen[t[1]]&&Math.abs(t[2])>=.1)out.push([t[0],t[1],-t[2]]);
+  return out.filter(t=>!/^(Chômage au début|Potentiel)/.test(t[1])).sort((x,y)=>Math.abs(y[2])-Math.abs(x[2]))}
+const _yr32=yearly;yearly=function(){_yr32();try{if(S.ysnap){const a=S.ysnap;S.yrep={y:S.year-1,a:a.v,b:digVals(),g:yrDiff(a.g,yrTerms(growthTerms)).slice(0,4),u:yrDiff(a.u,yrTerms(unempTerms)).slice(0,4),dip:[a.dip,yrDipAvg()],debt:[a.debt,debtRatio()*100],read:false};
+  news(`📅 Le bilan de l'année ${S.year-1} est dans ton bureau`)}yrSnap()}catch(e){}};
+function yrArrow(x,y,good,fmt){const d=y-x;if(Math.abs(d)<1e-9||/^0([,.]0+)?( |$)/.test(fmt(Math.abs(d))))return`<span class="dg">● stable</span>`;const up=d>0;return`<span class="dg ${(good==="up"?up:!up)?"pos":"neg"}">${up?"▲":"▼"} ${fmt(Math.abs(d))}</span>`}
+function yrAction(fn,key){try{const t=fn().find(q=>yrKey(q[1])===key);return t&&t[3]||null}catch(e){return null}}
+function yrHtml(full){const R=S.yrep;if(!R)return"";const a=R.a,b=R.b;
+  const rows=[["⭐","Popularité",b.pop+" %",yrArrow(a.pop,b.pop,"up",v=>Math.round(v)+" pt")],["📈","Croissance",pc(b.g),yrArrow(a.g,b.g,"up",v=>nf(v,1)+" pt")],["💼","Chômage",pc(b.u),yrArrow(a.u,b.u,"down",v=>nf(v,1)+" pt")],
+    ["🛒","Inflation",pc(b.inf),yrArrow(a.inf,b.inf,"down",v=>nf(v,1)+" pt")],["💰","Trésor",mny(b.res),yrArrow(a.res,b.res,"up",v=>mny(v))],["👥","Population",nf(b.popM,1)+" M",yrArrow(a.popM,b.popM,"up",v=>nf(v*1000,0)+" 000")],
+    ["🌍","Relations moyennes",Math.round(R.dip[1])+"/100",yrArrow(R.dip[0],R.dip[1],"up",v=>Math.round(v)+" pt")],["🏦","Dette",Math.round(R.debt[1])+" % du PIB",yrArrow(R.debt[0],R.debt[1],"down",v=>Math.round(v)+" pt")]];
+  let h=`<div class="digs">${rows.map(([i,t,v,d])=>`<div><span>${i} ${t}</span><b>${v}</b>${d}</div>`).join("")}</div>`;
+  const sec=(title,L0,fn,goodUp)=>{const L=full?L0:L0.slice(0,2);return L.length?`<div class="head">${title}</div>`+L.map(([i,t,d])=>{const on=yrAction(fn,t);const good=goodUp?d>0:d<0;return row({i,t,s:good?"a aidé":"a pesé",r:`<span class="dg ${good?"pos":"neg"}">${d>0?"+":"−"}${nf(Math.abs(d),1)} pt</span>`,on:on||undefined})}).join(""):""};
+  h+=sec("Ce qui a fait bouger la croissance",R.g,growthTerms,true)+sec("Ce qui a fait bouger le chômage",R.u,unempTerms,false);
+  return h}
+PN.bilan=()=>S.yrep?{t:`📅 Bilan de l'année ${S.yrep.y}`,h:yrHtml(true)+note("Comparaison entre le 1er janvier et le 31 décembre. Touche une ligne pour agir dessus.")}:null;
+const _bur32=TAB.bureau;TAB.bureau=()=>{const h=_bur32();const R=S.yrep;if(!R||R.read)return h;
+  return card(`📅 Bilan de l'année ${R.y}`,yrHtml(false)+row({i:"✔️",t:"J'ai lu le bilan",s:"Tu pourras le revoir dans le tableau de bord",on:()=>{R.read=true;render()}}))+h};
+const _tdb32=TAB.tdb;TAB.tdb=()=>{const h=_tdb32();return S.yrep?card("",row({i:"📅",t:`Revoir le bilan de l'année ${S.yrep.y}`,s:"Ce qui a changé et pourquoi",on:()=>openP("bilan")}))+h:h};
+const _ns32=newState;newState=function(){const s=_ns32.apply(this,arguments);const keep=S;S=s;try{yrSnap()}catch(e){}finally{S=keep}return s};
+const _mg32=migrate;migrate=function(s){_mg32(s);if(!s.ysnap){const keep=S;S=s;try{yrSnap()}catch(e){}finally{S=keep}}return s};
 
 </script>
 
