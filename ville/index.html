@@ -367,7 +367,7 @@ const isRoadT=ty=>ty>=RD&&ty<=RB, isZone=ty=>ty>=RE&&ty<=OF, isJob=ty=>ty===CO||
 const jobsAt=i=>isJob(S.t[i])?JOBS[S.t[i]][S.lv[i]]:0;
 const pick=a=>a[(rnd()*a.length)|0];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function unlocked(ty){const d=DEF[ty];return !d||!d.unlock||S.maxPop>=d.unlock;}
+function unlocked(ty){return true;} // tout est disponible dès le début
 
 // =================== Génération ===================
 function gen(){
@@ -582,7 +582,7 @@ function tick(){
   // objectifs & rangs
   while(S.obj<OBJ.length&&OBJ[S.obj][1]()){const o=OBJ[S.obj];S.money+=o[2];toast('Objectif atteint !',o[0]+' · +'+money(o[2]),1);sfx('coin');S.obj++;}
   while(S.rank<RANKS.length-2&&S.maxPop>=RANKS[S.rank+1][0]){S.rank++;const b=RANK_BONUS[S.rank];S.money+=b;
-    const un=Object.keys(DEF).filter(k=>DEF[k].unlock===RANKS[S.rank][0]).map(k=>DEF[k].short||DEF[k].n);
+    const un=[];
     sfx('coin');toast('Votre ville devient : '+RANKS[S.rank][1],'Prime de '+money(b)+(un.length?' · Nouveau : '+un.join(', '):''),1);buildTabs();if(cat!=='hand'&&cat!=='bull')buildTray();
     post(null,'La ville passe au rang de '+RANKS[S.rank][1]+' ! Bravo à toutes et à tous.');}
 }
@@ -1307,7 +1307,7 @@ function showDistrict(id){if(!S.districts[id-1])return;dShown=id;closeSheets('di
 function fillDistrict(){const D=S.districts[dShown-1];if(!D){q$('district').hidden=true;return;}
   q$('dSw').style.background=D.c;if(document.activeElement!==q$('dName'))q$('dName').value=D.n;
   q$('dTax').value=D.tax||0;q$('dTaxV').textContent=(D.tax>0?'+':'')+(D.tax||0)+' pt';
-  q$('dRules').innerHTML=DRULES.map(Q=>{const lk=Q.unlock&&S.maxPop<Q.unlock;return `<button class="pol${D.r[Q.k]?' on':''}" data-r="${Q.k}" ${lk?'disabled style="opacity:.5"':''} aria-pressed="${!!D.r[Q.k]}"><div class="who"><b>${esc(Q.n)}</b><span>${esc(Q.d)} · ${lk?'dès '+fmt(Q.unlock)+' hab.':Q.c?money(Q.c)+'/jour':'gratuit'}</span></div><span class="sw"></span></button>`;}).join('');
+  q$('dRules').innerHTML=DRULES.map(Q=>{const lk=false;return `<button class="pol${D.r[Q.k]?' on':''}" data-r="${Q.k}" ${lk?'disabled style="opacity:.5"':''} aria-pressed="${!!D.r[Q.k]}"><div class="who"><b>${esc(Q.n)}</b><span>${esc(Q.d)} · ${lk?'dès '+fmt(Q.unlock)+' hab.':Q.c?money(Q.c)+'/jour':'gratuit'}</span></div><span class="sw"></span></button>`;}).join('');
   q$('dRules').querySelectorAll('[data-r]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.r;D.r[k]=!D.r[k];if(D.r[k])post(null,D.n+' : '+DRULES.find(Q=>Q.k===k).n.toLowerCase()+' à partir d\'aujourd\'hui.');computeMaps();totals();groundDirty=true;fillDistrict();sfx('build');}));
   fillDistrictStats();}
 function fillDistrictStats(){const st=distStats(dShown);q$('dRows').innerHTML=rowsHtml([['Habitants',fmt(st.pop)],['Emplois',fmt(st.jobs)],['Bonheur',st.pop?`<span class="${st.hap>=65?'pos':st.hap<40?'neg':''}">${Math.round(st.hap)} %</span>`:'—'],['Surface',st.tiles+' cases']]);}
