@@ -12,6 +12,11 @@ Le dossier [`president/`](president/) contient **Président**, un simulateur de 
 (application installable, hors ligne). Voir [`president/README.md`](president/README.md) pour le mettre en ligne
 avec Cloudflare Pages (répertoire de sortie : `president`).
 
+## 🏙️ Aussi dans ce dépôt : Ville de Poche
+Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de construction de ville isométrique pensé pour le téléphone :
+routes, zones résidentielles / commerciales / industrielles, électricité, eau, services, impôts, cycle jour-nuit, voitures,
+objectifs et rangs (du hameau à la métropole). Un seul fichier : ouvrez `ville/index.html`. Sauvegarde automatique dans le navigateur.
+
 ## La carte
 Une vraie carte fabriquée pour le jeu (aucun service en ligne nécessaire) :
 - **relief ombré** calculé à partir des altitudes et profondeurs du monde entier (tuiles Terrarium de Mapzen, AWS Open Data),
