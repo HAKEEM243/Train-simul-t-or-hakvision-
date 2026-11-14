@@ -23,7 +23,9 @@ Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de constructio
 - **Services** : école, université, clinique, hôpital, commissariat, caserne (les incendies se propagent sans pompiers).
 - **Secours visibles** : voitures de police en patrouille et en intervention, camions de pompiers qui arrosent les incendies, ambulances ; gyrophares animés et sirènes sonores (bouton haut-parleur pour couper).
 - **Circulation simulée** : trajets domicile-travail calculés sur le réseau, embouteillages, vue trafic, bus et métro.
-- **Progression** du hameau à la mégapole (30 000 habitants), avec objectifs, primes et déblocages.
+- **Progression** du hameau à la **Mégalopole (100 000 habitants)**, avec objectifs, primes et déblocages ; gratte-ciel de niveau 4.
+- **Grands bâtiments sur plusieurs cases** : stade (3×3), port de commerce au bord de l'eau (4×3, grues et cargos), aéroport (6×4, avions qui décollent et atterrissent).
+- **Quartiers** à dessiner et à nommer, avec leurs propres règles (gratte-ciel, zone piétonne, quartier vert, touristique, industrie interdite) et impôts locaux.
 - **Feux tricolores** (vert, orange, rouge) à chaque carrefour : les voitures s'arrêtent et font la queue, les secours passent au rouge, le rond-point supprime l'attente.
 - **Lignes de bus** automatiques entre les arrêts (couleurs, passagers, tracés visibles en vue Transports).
 - **Météo et saisons** : soleil, nuages, pluie, orage, neige ; arbres d'automne, neige au sol ; la météo agit sur le solaire, l'éolien, les incendies et la circulation.
