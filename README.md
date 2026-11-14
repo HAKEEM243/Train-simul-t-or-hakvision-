@@ -24,6 +24,10 @@ Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de constructio
 - **Secours visibles** : voitures de police en patrouille et en intervention, camions de pompiers qui arrosent les incendies, ambulances ; gyrophares animés et sirènes sonores (bouton haut-parleur pour couper).
 - **Circulation simulée** : trajets domicile-travail calculés sur le réseau, embouteillages, vue trafic, bus et métro.
 - **Progression** du hameau à la mégapole (30 000 habitants), avec objectifs, primes et déblocages.
+- **Lignes de bus** automatiques entre les arrêts (couleurs, passagers, tracés visibles en vue Transports).
+- **Météo et saisons** : soleil, nuages, pluie, orage, neige ; arbres d'automne, neige au sol ; la météo agit sur le solaire, l'éolien, les incendies et la circulation.
+- **Arrêtés municipaux** (recyclage, vélo, transports gratuits, LED, poids lourds, taxe pollution), bouton **Annuler**, effets sonores.
+- **Appli installable** hors ligne : publiez le dossier `ville/` (GitHub Pages ou Cloudflare Pages, répertoire de sortie `ville`), puis sur iPhone Safari → Partager → « Sur l'écran d'accueil ».
 
 ## La carte
 Une vraie carte fabriquée pour le jeu (aucun service en ligne nécessaire) :

@@ -1,0 +1,17 @@
+{
+ "name": "Ville de Poche — construis ta métropole",
+ "short_name": "Ville de Poche",
+ "lang": "fr",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#4fa3c7",
+ "theme_color": "#4fa3c7",
+ "description": "Jeu de construction de ville : routes, ponts, tunnels, circulation, habitants, réseaux, services et finances.",
+ "icons": [
+  {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+  {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+  {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+ ]
+}
