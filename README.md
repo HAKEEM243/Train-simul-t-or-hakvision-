@@ -13,9 +13,16 @@ Le dossier [`president/`](president/) contient **Président**, un simulateur de 
 avec Cloudflare Pages (répertoire de sortie : `president`).
 
 ## 🏙️ Aussi dans ce dépôt : Ville de Poche
-Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de construction de ville isométrique pensé pour le téléphone :
-routes, zones résidentielles / commerciales / industrielles, électricité, eau, services, impôts, cycle jour-nuit, voitures,
-objectifs et rangs (du hameau à la métropole). Un seul fichier : ouvrez `ville/index.html`. Sauvegarde automatique dans le navigateur.
+Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de construction de ville isométrique pensé pour le téléphone
+(un seul fichier : ouvrez `ville/index.html`, sauvegarde automatique dans le navigateur) :
+- **Routes** : rue, avenue, autoroute, rond-point ; **ponts** et **tunnels** automatiques sur la rivière et la montagne.
+- **Zones** résidentielles, commerciales, industrielles et bureaux (3 niveaux), bâtiments et parcs placés librement.
+- **Habitants suivis un par un** : nom, âge, études, emploi, trajets réels en voiture, bus ou métro, humeur, pensées, naissances, déménagements ; « Le Fil » des habitants.
+- **Finances** : impôts par type de zone, recettes et dépenses détaillées, emprunts, historique sur 60 jours.
+- **Réseaux** : électricité (charbon, éolien, solaire) et eau avec capacité, ordures (décharge qui se remplit, incinérateur).
+- **Services** : école, université, clinique, hôpital, commissariat, caserne (les incendies se propagent sans pompiers).
+- **Circulation simulée** : trajets domicile-travail calculés sur le réseau, embouteillages, vue trafic, bus et métro.
+- **Progression** du hameau à la mégapole (30 000 habitants), avec objectifs, primes et déblocages.
 
 ## La carte
 Une vraie carte fabriquée pour le jeu (aucun service en ligne nécessaire) :
