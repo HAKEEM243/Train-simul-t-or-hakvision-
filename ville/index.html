@@ -257,7 +257,7 @@ const DEF={
   [RD]:{n:'Rue',cost:10,up:.25,cap:160,sp:1,cat:'road',d:'Deux voies. Donne accès aux zones jusqu\'à 2 cases.'},
   [AV]:{n:'Avenue',cost:30,up:.6,cap:420,sp:1.35,cat:'road',unlock:100,d:'Quatre voies avec terre-plein : bien plus de trafic.'},
   [HWY]:{n:'Autoroute',cost:60,up:1.2,cap:1000,sp:2.4,cat:'road',unlock:1200,d:'Très rapide, mais ne dessert pas les zones et fait du bruit.'},
-  [RB]:{n:'Rond-point',cost:150,up:.5,cap:400,sp:1.15,cat:'road',unlock:400,d:'Fluidifie un carrefour. Se pose sur une intersection de rues ou d\'avenues.'},
+  [RB]:{n:'Rond-point',cost:150,up:.5,cap:400,sp:1.15,cat:'road',unlock:400,d:'Remplace les feux d\'un carrefour : les voitures ne s\'arrêtent plus. Se pose sur une intersection.'},
   [RE]:{n:'Résidentiel',cost:20,zone:1,col:'#3fbf63',cat:'zone'},
   [CO]:{n:'Commerce',cost:25,zone:1,col:'#3b95e6',cat:'zone'},
   [IN]:{n:'Industrie',cost:25,zone:1,col:'#f0a92a',cat:'zone'},
@@ -324,6 +324,7 @@ let S;
 const pow=new Uint8Array(NN),pon=new Uint8Array(NN),wat=new Uint8Array(NN),won=new Uint8Array(NN),conn=new Uint8Array(NN),nr=new Int32Array(NN);
 const svS=new Uint8Array(NN),svU=new Uint8Array(NN),svH=new Uint8Array(NN),svP=new Uint8Array(NN),svF=new Uint8Array(NN),busC=new Uint8Array(NN),metC=new Uint8Array(NN),garbC=new Uint8Array(NN);
 const pol=new Float32Array(NN),val=new Float32Array(NN),noise=new Float32Array(NN),flags=new Uint8Array(NN),gar=new Float32Array(NN),fire=new Uint8Array(NN);
+const lightI=new Uint8Array(NN);let lightClock=0;
 const flow=new Float32Array(NN),flowNew=new Float32Array(NN),cong=new Float32Array(NN),commute=new Float32Array(NN).fill(15);
 const cnt=new Int32Array(64), bq=new Int32Array(NN);
 const upCat={road:0,svc:0,util:0,tr:0,fun:0};
@@ -395,7 +396,8 @@ function computeMaps(){
   while(qh<qt){const i=bq[qh++],x=i%N;
     const ns=[x>0?i-1:-1,x<N-1?i+1:-1,i-N,i+N];
     for(const j of ns){if(j<0||j>=NN||conn[j]||!isRoadT(T[j]))continue;conn[j]=1;bq[qt++]=j;}}
-  for(let i=0;i<NN;i++){const ty=T[i];nr[i]=(isZone(ty)||isBld(ty))?findRoad(i):-1;}
+  for(let i=0;i<NN;i++){const ty=T[i];nr[i]=(isZone(ty)||isBld(ty))?findRoad(i):-1;
+    lightI[i]=0;if((ty===RD||ty===AV)&&TE[i]===PLAIN){const x=i%N,y=(i/N)|0;if(isRoadXY(x+1,y)+isRoadXY(x-1,y)+isRoadXY(x,y+1)+isRoadXY(x,y-1)>=3)lightI[i]=1;}}
   const ok=i=>nr[i]>=0&&conn[nr[i]];
   for(let i=0;i<NN;i++){
     const ty=T[i],te=TE[i],x=i%N,y=(i/N)|0;
@@ -989,13 +991,21 @@ function updateVeh(dt){
       if(v.k==='fire'){if(!fire[v.target])v.workT=Math.min(v.workT,1.2);else sprayWater(v);}
       if(v.workT<=0&&!leaveScene(v))veh.splice(q,1);continue;}
     const j=v.ny*N+v.nx,ty=S.t[j];const c=Math.min(cong[j],2)*(v.siren?.35:1);
-    v.p+=dt*v.sp*DEF[ty].sp*(v.siren?1.7:1)*wxSpeed()/(1+2.2*c*c);
+    let inc=dt*v.sp*DEF[ty].sp*(v.siren?1.7:1)*wxSpeed()/(1+2.2*c*c);
+    v.wait=false;
+    if(lightI[j]&&!v.siren&&v.p<=STOPP){const st=lightState(j,v.nx!==v.x?0:1);if(st==='r'||(st==='o'&&v.p<STOPP-.06)){if(v.p+inc>STOPP){inc=Math.max(0,STOPP-v.p);v.wait=true;}}}
+    v.p+=inc;
     if(v.p>=1){v.p-=1;v.px=v.x;v.py=v.y;v.x=v.nx;v.y=v.ny;
       if(v.path){v.pi++;if(v.pi>=v.path.length-1){if(v.agent){v.agent.veh=null;v.agent.arr=0;}if(v.stage==='go'){onScene(v);continue;}veh.splice(q,1);continue;}const nn=v.path[v.pi+1];v.nx=nn%N;v.ny=(nn/N)|0;}
       else{let n=nbRoads(v.x,v.y).filter(p=>p[0]!==v.px||p[1]!==v.py);if(!n.length)n=[[v.px,v.py]];
         if(v.k==='car'&&n.length>1){let tot=0;const w=n.map(p=>{const f=flow[p[1]*N+p[0]]+15;tot+=f;return f;});let r=rnd()*tot,k=0;while(r>w[k]&&k<n.length-1){r-=w[k];k++;}v.nx=n[k][0];v.ny=n[k][1];}
         else{const p=pick(n);v.nx=p[0];v.ny=p[1];}}}
   }
+  // file d'attente : pas de dépassement sur un même tronçon
+  const grp=new Map();
+  for(const v of veh){if(v.parked)continue;const k=(v.y*N+v.x)*4+(v.nx>v.x?0:v.nx<v.x?1:v.ny>v.y?2:3);let a=grp.get(k);if(!a)grp.set(k,a=[]);a.push(v);}
+  for(const a of grp.values()){if(a.length<2)continue;a.sort((u,w)=>w.p-u.p);
+    for(let k=1;k<a.length;k++){const gap=(a[k].k==='bus'||a[k-1].k==='bus'||a[k-1].k==='fire')?.5:.32;if(a[k].p>a[k-1].p-gap){a[k].p=Math.max(0,a[k-1].p-gap);if(a[k-1].wait)a[k].wait=true;}}}
   // piétons
   const wantP=Math.min(140,Math.floor(pop/25))*(night>.3?.3:1)*(S.wx.k==='rain'||S.wx.k==='storm'?.35:S.wx.k==='snow'?.6:1);
   if(peds.length<wantP&&rnd()<.4){for(let t=0;t<8;t++){const i=(rnd()*NN)|0;if(!localRoad(i))continue;const x=i%N,y=(i/N)|0,n=nbRoads(x,y);if(!n.length)continue;const [nx,ny]=pick(n);peds.push({x,y,nx,ny,px:x,py:y,p:0,s:rnd()<.5?-1:1,sp:.25+rnd()*.15,c:pick(AVCOL)});break;}}
@@ -1045,11 +1055,31 @@ function drawEmergency(v,p,along,s){
   gbox(bx+ex,by+ey,.05,.05,2,on?(ph?'#1d2a5a':E.l2):'#6b7280',top);
   if(on){const gx=(bx-by)*HW,gy=(bx+by)*HH+top-1.5;glows.push({x:gx+(ph?-2:2),y:gy,c:ph?E.l1:E.l2});}
 }
+// =================== Feux tricolores ===================
+const STOPP=.36, CYC=10;
+function lightState(i,ax){
+  const t=(lightClock+hash01(i)*CYC)%CYC;
+  if(ax===0)return t<4?'g':t<5?'o':'r';
+  return t<5?'r':t<9?'g':'o';
+}
+const TLC={r:['#ff2d2d','#4a1d1d'],o:['#ffa41a','#4a3512'],g:['#29e06a','#123d22']};
+function drawTrafficLights(i,cx,cy){
+  const s0=lightState(i,0),s1=lightState(i,1);
+  const P=[[cx,cy-HH*.74,s0],[cx-HW*.74,cy,s1],[cx+HW*.74,cy,s1],[cx,cy+HH*.74,s0]];
+  for(const [px,py,st] of P){
+    g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(px+1,py+.5,2,1,0,0,7);g.fill();
+    g.strokeStyle='#3b3f46';g.lineWidth=1.3;g.beginPath();g.moveTo(px,py);g.lineTo(px,py-11);g.stroke();
+    g.fillStyle='#23272e';g.fillRect(px-2.3,py-20,4.6,9.6);
+    ['r','o','g'].forEach((c,k)=>{const on=st===c,ly=py-18+k*3;g.fillStyle=TLC[c][on?0:1];g.beginPath();g.arc(px,ly,1.15,0,7);g.fill();
+      if(on&&g===main)glows.push({x:px,y:ly,c:TLC[c][0],small:1});});
+  }
+}
 function drawGlows(t){
   if(!glows.length)return;
   g.setTransform(DPR*z,0,0,DPR*z,DPR*ox,DPR*oy);g.globalCompositeOperation='lighter';
   const a=.6+night*.8,r=12+night*10;
-  for(const o of glows){const gr=g.createRadialGradient(o.x,o.y,0,o.x,o.y,r);gr.addColorStop(0,o.c);gr.addColorStop(1,'rgba(0,0,0,0)');g.globalAlpha=Math.min(1,a);g.fillStyle=gr;g.beginPath();g.arc(o.x,o.y,r,0,7);g.fill();
+  for(const o of glows){if(o.small){const rr=3.5+night*4;const gr=g.createRadialGradient(o.x,o.y,0,o.x,o.y,rr);gr.addColorStop(0,o.c);gr.addColorStop(1,'rgba(0,0,0,0)');g.globalAlpha=.45+night*.55;g.fillStyle=gr;g.beginPath();g.arc(o.x,o.y,rr,0,7);g.fill();continue;}
+    const gr=g.createRadialGradient(o.x,o.y,0,o.x,o.y,r);gr.addColorStop(0,o.c);gr.addColorStop(1,'rgba(0,0,0,0)');g.globalAlpha=Math.min(1,a);g.fillStyle=gr;g.beginPath();g.arc(o.x,o.y,r,0,7);g.fill();
     g.globalAlpha=.25+night*.3;g.beginPath();g.ellipse(o.x,o.y+8,r*1.7,r*.75,0,0,7);g.fill();
     if(detail){g.globalAlpha=.9;g.strokeStyle=o.c;g.lineWidth=1;for(let k=0;k<4;k++){const an=k*Math.PI/2+t/300;g.beginPath();g.moveTo(o.x+Math.cos(an)*3,o.y+Math.sin(an)*3);g.lineTo(o.x+Math.cos(an)*7,o.y+Math.sin(an)*7);g.stroke();}}}
   g.globalAlpha=1;g.globalCompositeOperation='source-over';
@@ -1247,6 +1277,7 @@ function render(t){
     if(te===MOUNT)drawMountain(i,x,y,cx,cy);
     else if(te===WATER&&isRoadT(ty))drawBridge(i,x,y,cx,cy,ty);
     else if(ty&&!isRoadT(ty))drawObj(i,x,y,cx,cy,t);
+    if(lightI[i]&&detail&&te===PLAIN)drawTrafficLights(i,cx,cy);
     if(ps)for(const p of ps)drawPed(p);
     if(vs)for(const v of vs)drawVeh(v);}}
   if(overlay===8)drawLines();
@@ -1441,7 +1472,7 @@ function fillInfo(){
   if(!ty){title=te===WATER?'Rivière':'Montagne';sub=te===WATER?'Tracez une route par-dessus pour construire un pont.':'Tracez une route à travers pour creuser un tunnel.';}
   else if(isRoadT(ty)){title=d.n+(te===WATER?' · pont':te===MOUNT?' · tunnel':'');sub=d.d;
     const c=cong[i];rows.push(['Trafic',fmt(flow[i])+' véh./jour'],['Capacité',fmt(capOf(i))+' véh./jour'],['État',c<.5?'<span class="pos">fluide</span>':c<1?'<span style="color:var(--warn)">dense</span>':'<span class="neg">embouteillé</span>'],
-      ['Relié à l\'autoroute',conn[i]?yes:no],['Entretien',money(d.up*(te!==PLAIN?3:1))+'/jour']);
+      ['Relié à l\'autoroute',conn[i]?yes:no],...(lightI[i]?[['Feux tricolores',{g:'<span class="pos">vert</span>',o:'<span style="color:var(--warn)">orange</span>',r:'<span class="neg">rouge</span>'}[lightState(i,0)]+' / '+{g:'<span class="pos">vert</span>',o:'<span style="color:var(--warn)">orange</span>',r:'<span class="neg">rouge</span>'}[lightState(i,1)]]]:[]),['Entretien',money(d.up*(te!==PLAIN?3:1))+'/jour']);
     if(c>=1&&ty===RD)rows.push(['Conseil','Passez en avenue, ajoutez un rond-point ou des transports en commun.']);}
   else if(isZone(ty)){title=lv?(ty===RE?LVNAME[ty][lv]:bizName(i)):LVNAME[ty][0];sub=(lv?LVNAME[ty][lv]+' · ':'')+'zone '+d.n.toLowerCase()+' · niveau '+lv+'/3';
     if(ty===RE)rows.push(['Habitants',fmt(POP[lv])]);else rows.push(['Emplois',fmt(JOBS[ty][lv])]);
@@ -1607,7 +1638,7 @@ function frame(now){
   const a=Math.cos(((S.hour/24)-0)*Math.PI*2);night=clamp((a+.1)/1.1,0,1)*.58;
   smokeDt=dt;frameDt=dt;
   routT+=dt;if(routT>.2&&spd){routT=0;agentRoutine();}
-  if(spd)updateVeh(dt*Math.min(spd,2.5));
+  if(spd){lightClock+=dt*Math.min(spd,2.5);updateVeh(dt*Math.min(spd,2.5));}
   for(let k=parts.length-1;k>=0;k--){const p=parts[k];p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.gr)p.vy+=40*dt;p.l-=dt*p.k*(spd?1:.6);if(p.l<=0)parts.splice(k,1);}
   if(parts.length>500)parts.splice(0,parts.length-500);
   if(followId){const ag=agents.find(x=>x.id===followId);if(!ag)followId=0;else{let fx,fy;if(ag.veh){const p=vehPos(ag.veh);fx=p.fx;fy=p.fy;}else{fx=ag.at%N+.5;fy=((ag.at/N)|0)+.5;}
