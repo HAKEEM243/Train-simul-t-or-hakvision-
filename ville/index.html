@@ -175,6 +175,7 @@ canvas.chart{width:100%;height:90px;display:block;margin-top:8px;background:var(
   <button class="fab" id="budBtn" aria-label="Budget"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.4" fill="currentColor"/></svg></button>
   <button class="fab" id="statBtn" aria-label="Habitants et statistiques"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2 5 5"/></svg></button>
   <button class="fab" id="homeBtn" aria-label="Recentrer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  <button class="fab" id="sndBtn" aria-label="Son des sirènes"></button>
 </div>
 <div id="views" class="card" hidden></div>
 <div id="legend" hidden></div>
@@ -499,11 +500,14 @@ function tick(){
   if(changed)groundDirty=true;
   totals();
   // incendies
-  firesNow=0;
+  firesNow=0;const trucks=new Map();for(const v of veh)if(v.k==='fire'&&v.stage!=='back')trucks.set(v.target,v);
   for(let i=0;i<NN;i++){
     const ty=T[i];
     if(fire[i]){firesNow++;fire[i]++;
-      if(svF[i]&&fire[i]>3&&rnd()<.5){fire[i]=0;continue;}
+      const tr=trucks.get(i);
+      if(tr&&tr.parked&&fire[i]>1&&rnd()<.4){fire[i]=0;if(rnd()<.4)post(null,'Les pompiers ont maîtrisé un incendie : '+(isZone(ty)?(ty===RE?LVNAME[RE][L[i]].toLowerCase():bizName(i)):DEF[ty].n)+'. Aucun blessé.');continue;}
+      if(!tr&&svF[i])dispatch('fire',[FIRE],i);
+      if(!tr&&svF[i]&&fire[i]>10&&rnd()<.15){fire[i]=0;continue;}
       if(fire[i]>16){fire[i]=0;if(isZone(ty))L[i]=0;else{T[i]=NONE;delete S.fill[i];}groundDirty=true;
         if(onScreen(i))puff(i,'#555',10);toast('Bâtiment détruit par le feu','Construisez une caserne de pompiers à proximité.',2);}
       else if(rnd()<.04){const x=i%N,y=(i/N)|0,j=pick([[x+1,y],[x-1,y],[x,y+1],[x,y-1]]);if(j[0]>=0&&j[1]>=0&&j[0]<N&&j[1]<N){const k=j[1]*N+j[0];if(isZone(T[k])&&L[k]&&!fire[k])fire[k]=1;}}
@@ -521,6 +525,7 @@ function tick(){
   expTot=upCat.road+upCat.svc+upCat.util+upCat.tr+upCat.fun+loanPay;
   S.money+=(incTot-expTot)/12;
   if(pop>S.maxPop)S.maxPop=pop;
+  emergencyCalls();
   trafficStep();
   agentMaintain();
   // objectifs & rangs
@@ -943,7 +948,8 @@ function puff(i,col,n){const [cx,cy]=center(i%N,(i/N)|0);for(let k=0;k<n;k++)par
 
 // =================== Véhicules & piétons ===================
 const CAR_COL=['#e5484d','#3b95e6','#f0a92a','#ffffff','#2fa86b','#8e5bd9','#2b2f38','#c9ced6'];
-function mkVeh(k,x,y,nx,ny){return{k,x,y,nx,ny,px:x,py:y,p:0,sp:(k==='bus'?1:1.2)+rnd()*.5,c:k==='bus'?'#f2c230':k==='truck'?'#e8ece9':pick(CAR_COL)};}
+let vid=1;
+function mkVeh(k,x,y,nx,ny){return{id:vid++,k,x,y,nx,ny,px:x,py:y,p:0,sp:(k==='bus'?1:1.2)+rnd()*.5,c:k==='bus'?'#f2c230':k==='truck'?'#e8ece9':pick(CAR_COL)};}
 function nbRoads(x,y){const r=[];if(isRoadXY(x+1,y))r.push([x+1,y]);if(isRoadXY(x-1,y))r.push([x-1,y]);if(isRoadXY(x,y+1))r.push([x,y+1]);if(isRoadXY(x,y-1))r.push([x,y-1]);return r;}
 function spawnOnRoad(k,weighted){
   for(let t=0;t<12;t++){const i=(rnd()*NN)|0;if(!isRoadT(S.t[i]))continue;if(weighted&&rnd()>flow[i]/(maxFlow*.6)+.04)continue;
@@ -956,10 +962,13 @@ function updateVeh(dt){
     else if(counts[k]>want[k]+2){const idx=veh.findIndex(v=>v.k===k);if(idx>=0)veh.splice(idx,1);}}
   for(let q=veh.length-1;q>=0;q--){const v=veh[q];
     if(!isRoadXY(v.x,v.y)||!isRoadXY(v.nx,v.ny)){if(v.agent){v.agent.veh=null;v.agent.arr=0;}veh.splice(q,1);continue;}
-    const j=v.ny*N+v.nx,ty=S.t[j];const c=Math.min(cong[j],2);
-    v.p+=dt*v.sp*DEF[ty].sp/(1+2.2*c*c);
+    if(v.parked){v.workT-=dt;
+      if(v.k==='fire'){if(!fire[v.target])v.workT=Math.min(v.workT,1.2);else sprayWater(v);}
+      if(v.workT<=0&&!leaveScene(v))veh.splice(q,1);continue;}
+    const j=v.ny*N+v.nx,ty=S.t[j];const c=Math.min(cong[j],2)*(v.siren?.35:1);
+    v.p+=dt*v.sp*DEF[ty].sp*(v.siren?1.7:1)/(1+2.2*c*c);
     if(v.p>=1){v.p-=1;v.px=v.x;v.py=v.y;v.x=v.nx;v.y=v.ny;
-      if(v.path){v.pi++;if(v.pi>=v.path.length-1){if(v.agent){v.agent.veh=null;v.agent.arr=0;}veh.splice(q,1);continue;}const nn=v.path[v.pi+1];v.nx=nn%N;v.ny=(nn/N)|0;}
+      if(v.path){v.pi++;if(v.pi>=v.path.length-1){if(v.agent){v.agent.veh=null;v.agent.arr=0;}if(v.stage==='go'){onScene(v);continue;}veh.splice(q,1);continue;}const nn=v.path[v.pi+1];v.nx=nn%N;v.ny=(nn/N)|0;}
       else{let n=nbRoads(v.x,v.y).filter(p=>p[0]!==v.px||p[1]!==v.py);if(!n.length)n=[[v.px,v.py]];
         if(v.k==='car'&&n.length>1){let tot=0;const w=n.map(p=>{const f=flow[p[1]*N+p[0]]+15;tot+=f;return f;});let r=rnd()*tot,k=0;while(r>w[k]&&k<n.length-1){r-=w[k];k++;}v.nx=n[k][0];v.ny=n[k][1];}
         else{const p=pick(n);v.nx=p[0];v.ny=p[1];}}}
@@ -979,15 +988,101 @@ function vehPos(v){
 }
 function drawVeh(v){
   const p=vehPos(v);if(p.hidden)return;const along=p.dx!==0;
-  const L=v.k==='bus'?.33:v.k==='truck'?.26:.2,Wd=v.k==='bus'?.11:.1;
+  const L=v.k==='bus'?.33:v.k==='truck'||v.k==='fire'?.28:v.k==='amb'?.23:.2,Wd=v.k==='bus'||v.k==='fire'?.11:.1;
   const lx=along?L:Wd,ly=along?Wd:L;
   g.fillStyle='rgba(0,0,0,.18)';const s=[(p.fx-p.fy)*HW,(p.fx+p.fy)*HH+p.yo];g.beginPath();g.ellipse(s[0],s[1]+1,lx*HW+ly*HW,(lx+ly)*HH,0,0,7);g.fill();
   if(v.k==='bus'){gbox(p.fx,p.fy,lx,ly,7,v.c,p.yo);if(detail)gbox(p.fx,p.fy,lx*.95,ly*.95,0,'#cfe6f7',p.yo-5);}
   else if(v.k==='truck'){gbox(p.fx,p.fy,lx,ly,6,'#e8ece9',p.yo);gbox(p.fx+(along?p.dx*.12:0),p.fy+(along?0:p.dy*.12),along?.07:Wd,along?Wd:.07,6.5,'#2fa86b',p.yo);}
+  else if(EMER[v.k]){drawEmergency(v,p,along,s);}
   else{gbox(p.fx,p.fy,lx,ly,3.5,v.c,p.yo);if(detail)gbox(p.fx,p.fy,lx*.55,ly*.55,2.2,'#cfe6f7',p.yo-3.5);}
+  if(EMER[v.k])hits.push({x:s[0],y:s[1]-4,e:v});
   if(v.agent){hits.push({x:s[0],y:s[1]-4,a:v.agent});if(followId===v.agent.id){g.strokeStyle='#ff7a3d';g.lineWidth=2;g.beginPath();g.arc(s[0],s[1]-3,9,0,7);g.stroke();}}
   if(night>.15&&g===main)lights.push([s[0]-1.5,s[1]-3,s[0]+1.5,s[1]-3,s[0]+1.5,s[1]-1,s[0]-1.5,s[1]-1,1]);
 }
+// =================== Secours : police, pompiers, ambulances ===================
+const EMER={
+  police:{n:'Voiture de police',body:'#f4f6f8',band:'#2f5fd0',l1:'#ff2b2b',l2:'#2f6bff',mission:'une intervention',work:'les agents sécurisent le secteur'},
+  fire:{n:'Camion de pompiers',body:'#d8322b',band:'#f4f6f8',l1:'#2f6bff',l2:'#7fb2ff',mission:'un incendie',work:'les pompiers arrosent le feu'},
+  amb:{n:'Ambulance',body:'#f7f8fa',band:'#ff7a1a',l1:'#2f6bff',l2:'#ff2b2b',mission:'une urgence médicale',work:'les secouristes soignent un habitant'}};
+const glows=[];
+function drawEmergency(v,p,along,s){
+  const E=EMER[v.k],ln=v.k==='fire'?.28:v.k==='amb'?.23:.2,wd=v.k==='fire'?.11:.1,lx=along?ln:wd,ly=along?wd:ln;
+  const h=v.k==='fire'?6:v.k==='amb'?5.5:3.5;
+  gbox(p.fx,p.fy,lx,ly,h*.45,E.band,p.yo);gbox(p.fx,p.fy,lx,ly,h*.55,E.body,p.yo-h*.45);
+  if(v.k==='fire'&&detail){g.strokeStyle='#e9ecef';g.lineWidth=1.2;g.beginPath();
+    const f0=[p.fx-(along?ln*.7:0),p.fy-(along?0:ln*.7)],f1=[p.fx+(along?ln*.4:0),p.fy+(along?0:ln*.4)];
+    g.moveTo((f0[0]-f0[1])*HW,(f0[0]+f0[1])*HH+p.yo-h-1);g.lineTo((f1[0]-f1[1])*HW,(f1[0]+f1[1])*HH+p.yo-h-1);g.stroke();}
+  if(v.k==='amb'&&detail){g.fillStyle='#e5484d';const c=[s[0],s[1]-h-.3];g.fillRect(c[0]-2.2,c[1]-.7,4.4,1.4);g.fillRect(c[0]-.7,c[1]-1.6,1.4,3.2);}
+  if(v.k==='police'&&detail)gbox(p.fx,p.fy,lx*.5,ly*.5,1.6,'#cfe6f7',p.yo-h);
+  // rampe de gyrophares
+  const on=v.siren,ph=Math.floor(performance.now()/140+v.id)%2;
+  const ex=along?0:.055,ey=along?.055:0,fwd=v.k==='fire'?.12:0,bx=p.fx+(along?p.dx*fwd:0),by=p.fy+(along?0:p.dy*fwd),top=p.yo-h-(v.k==='police'&&detail?1.6:0);
+  gbox(bx-ex,by-ey,.05,.05,2,on?(ph?E.l1:'#5a1d1d'):'#6b7280',top);
+  gbox(bx+ex,by+ey,.05,.05,2,on?(ph?'#1d2a5a':E.l2):'#6b7280',top);
+  if(on){const gx=(bx-by)*HW,gy=(bx+by)*HH+top-1.5;glows.push({x:gx+(ph?-2:2),y:gy,c:ph?E.l1:E.l2});}
+}
+function drawGlows(t){
+  if(!glows.length)return;
+  g.setTransform(DPR*z,0,0,DPR*z,DPR*ox,DPR*oy);g.globalCompositeOperation='lighter';
+  const a=.6+night*.8,r=12+night*10;
+  for(const o of glows){const gr=g.createRadialGradient(o.x,o.y,0,o.x,o.y,r);gr.addColorStop(0,o.c);gr.addColorStop(1,'rgba(0,0,0,0)');g.globalAlpha=Math.min(1,a);g.fillStyle=gr;g.beginPath();g.arc(o.x,o.y,r,0,7);g.fill();
+    g.globalAlpha=.25+night*.3;g.beginPath();g.ellipse(o.x,o.y+8,r*1.7,r*.75,0,0,7);g.fill();
+    if(detail){g.globalAlpha=.9;g.strokeStyle=o.c;g.lineWidth=1;for(let k=0;k<4;k++){const an=k*Math.PI/2+t/300;g.beginPath();g.moveTo(o.x+Math.cos(an)*3,o.y+Math.sin(an)*3);g.lineTo(o.x+Math.cos(an)*7,o.y+Math.sin(an)*7);g.stroke();}}}
+  g.globalAlpha=1;g.globalCompositeOperation='source-over';
+}
+function sprayWater(v){if(rnd()>.6)return;const p=vehPos(v),[cx,cy]=center(v.target%N,(v.target/N)|0);const sx=(p.fx-p.fy)*HW,sy=(p.fx+p.fy)*HH-7;
+  const d=Math.hypot(cx-sx,cy-20-sy)||1;parts.push({x:sx,y:sy,vx:(cx-sx)/d*55+(rnd()-.5)*8,vy:(cy-22-sy)/d*55-25,l:.8,r:1.4,c:'#bfe6ff',k:1.4,gr:1});}
+function dispatch(kind,from,target){
+  const st=nearestOf(target,from);if(st<0)return null;const s0=nr[st],e=nr[target];
+  if(s0<0||e<0||!conn[s0]||!conn[e])return null;
+  let p;if(s0===e){const n=nbRoads(s0%N,(s0/N)|0);if(!n.length)return null;p=[s0,n[0][1]*N+n[0][0]];}
+  else{dijkstra([s0],e);p=pathTo(e);if(!p||p.length<2)return null;}
+  const v=mkVeh(kind,p[0]%N,(p[0]/N)|0,p[1]%N,(p[1]/N)|0);v.path=p;v.pi=0;v.siren=true;v.home=st;v.target=target;v.stage='go';v.sp=1.3;veh.push(v);return v;
+}
+function onScene(v){v.stage='work';v.parked=true;v.siren=v.k!=='police'||rnd()<.5;v.workT=v.k==='fire'?30:v.k==='amb'?4:6;v.nx=v.px;v.ny=v.py;v.p=0;
+  if(v.k==='amb'&&rnd()<.35){const a=agents.find(x=>x.home===v.target);if(a)post(a,pick(['L\'ambulance est arrivée en cinq minutes, merci aux secours !','Merci au SAMU, tout va bien maintenant.','Grosse frayeur cette nuit, heureusement les secours sont venus vite.']));}
+  if(v.k==='police'&&rnd()<.25){const a=agents.find(x=>x.home===v.target||x.job===v.target);if(a)post(a,pick(['La police est intervenue dans ma rue, tout est rentré dans l\'ordre.','Gyrophares devant chez moi ce soir, mais rien de grave.']));}}
+function leaveScene(v){
+  const here=v.y*N+v.x,home=nr[v.home];
+  if(home<0||!isRoadT(S.t[here])||(S.t[v.home]!==FIRE&&S.t[v.home]!==POL&&S.t[v.home]!==CLIN&&S.t[v.home]!==HOSP))return false;
+  if(here===home)return false;
+  dijkstra([here],home);const p=pathTo(home);if(!p||p.length<2)return false;
+  v.path=p;v.pi=0;v.x=p[0]%N;v.y=(p[0]/N)|0;v.nx=p[1]%N;v.ny=(p[1]/N)|0;v.p=0;v.parked=false;v.stage='back';v.siren=v.k==='amb';return true;
+}
+function emergencyCalls(){
+  let pc=0,ac=0,pat=0;for(const v of veh){if(v.k==='police'){if(v.patrol)pat++;else pc++;}else if(v.k==='amb')ac++;}
+  const T=S.t,L=S.lv,pickTile=(cov)=>{for(let t=0;t<25;t++){const i=(rnd()*NN)|0;if(isZone(T[i])&&L[i]&&cov[i]&&nr[i]>=0&&conn[nr[i]])return i;}return -1;};
+  if(cnt[POL]&&pc<Math.min(6,cnt[POL]*2)&&rnd()<Math.min(.35,pop/2500+.04)){const i=pickTile(svP);if(i>=0)dispatch('police',[POL],i);}
+  if((cnt[CLIN]+cnt[HOSP])&&ac<Math.min(8,(cnt[CLIN]+cnt[HOSP]*2))&&rnd()<Math.min(.35,pop/3000+.03)){const i=pickTile(svH);if(i>=0)dispatch('amb',[CLIN,HOSP],i);}
+  const wantPat=Math.min(12,cnt[POL]*2);
+  if(pat<wantPat){for(let i=0;i<NN;i++){if(T[i]!==POL||nr[i]<0||!conn[nr[i]]||rnd()>.5)continue;const r=nr[i],n=nbRoads(r%N,(r/N)|0);if(!n.length)continue;const v=mkVeh('police',r%N,(r/N)|0,n[0][0],n[0][1]);v.patrol=true;v.siren=false;veh.push(v);if(++pat>=wantPat)break;}}
+  else if(pat>wantPat){const k=veh.findIndex(v=>v.patrol);if(k>=0)veh.splice(k,1);}
+}
+// =================== Son des sirènes ===================
+let AC=null,master=null,sir={},sound=true;
+try{sound=localStorage.getItem('vdp-sound')!=='0';}catch(e){}
+function initAudio(){
+  if(!sound)return;
+  if(AC){if(AC.state==='suspended')AC.resume();return;}
+  try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){AC=null;return;}
+  master=AC.createGain();master.gain.value=.11;const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1900;lp.connect(master);master.connect(AC.destination);
+  for(const k of ['police','fire','amb']){const o=AC.createOscillator();o.type=k==='police'?'sawtooth':k==='fire'?'square':'triangle';const gn=AC.createGain();gn.gain.value=0;o.connect(gn);gn.connect(lp);o.start();sir[k]={o,gn};}
+}
+document.addEventListener('pointerdown',initAudio,{capture:true});
+function updateAudio(t){
+  if(!AC)return;const now=AC.currentTime,lvl={police:0,fire:0,amb:0};
+  if(sound&&S.speed){const R=Math.max(W,H)*.75;
+    for(const v of veh){if(!v.siren||!EMER[v.k])continue;const p=vehPos(v);if(p.hidden)continue;const sx=ox+(p.fx-p.fy)*HW*z,sy=oy+(p.fx+p.fy)*HH*z;
+      const d=Math.hypot(sx-W/2,sy-H/2);const l=clamp(1-d/R,0,1)*clamp(z/1.3,.25,1);if(l>lvl[v.k])lvl[v.k]=l;}}
+  const s=t/1000;
+  for(const k in sir){const f=k==='police'?760+420*Math.sin(s*Math.PI*2/2.2):k==='fire'?(Math.floor(s/.62)%2?488:435)*1.5:(Math.floor(s/.5)%2?516:420)*1.6;
+    sir[k].o.frequency.setTargetAtTime(f,now,k==='police'?.03:.008);sir[k].gn.gain.setTargetAtTime(lvl[k]*(k==='fire'?.32:.42),now,.15);}
+}
+const SVG_SND_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const SVG_SND_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="m17 9 5 6M22 9l-5 6"/></svg>';
+function updSnd(){const b=document.getElementById('sndBtn');b.innerHTML=sound?SVG_SND_ON:SVG_SND_OFF;b.classList.toggle('on',sound);b.setAttribute('aria-label',sound?'Couper le son des sirènes':'Activer le son des sirènes');}
+document.getElementById('sndBtn').addEventListener('click',()=>{sound=!sound;try{localStorage.setItem('vdp-sound',sound?'1':'0');}catch(e){}if(sound)initAudio();updSnd();toast(sound?'Sirènes activées':'Sirènes coupées',sound?'Vous entendrez police, pompiers et ambulances près de l\'écran.':'');});
+updSnd();
 function drawPed(p){
   const dx=p.nx-p.x,dy=p.ny-p.y,o=.42*p.s;const fx=p.x+.5+dx*p.p-dy*o,fy=p.y+.5+dy*p.p+dx*o;const sx=(fx-fy)*HW,sy=(fx+fy)*HH;
   g.fillStyle=p.c;g.fillRect(sx-1,sy-5,2,4);g.fillStyle='#f1c9a5';g.beginPath();g.arc(sx,sy-6.2,1.3,0,7);g.fill();
@@ -995,7 +1090,7 @@ function drawPed(p){
 function onScreen(i){const [cx,cy]=center(i%N,(i/N)|0);const sx=ox+cx*z,sy=oy+cy*z;return sx>-60&&sx<W+60&&sy>-60&&sy<H+60;}
 
 function render(t){
-  g=main;lights.length=0;hits.length=0;detail=z>=.6;
+  g=main;lights.length=0;hits.length=0;glows.length=0;detail=z>=.6;
   g.setTransform(DPR,0,0,DPR,0,0);
   const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#6fbfdc');bg.addColorStop(1,'#2f7ea6');g.fillStyle=bg;g.fillRect(0,0,W,H);
   g.setTransform(DPR*z,0,0,DPR*z,DPR*ox,DPR*oy);
@@ -1030,6 +1125,7 @@ function render(t){
     // lampadaires
     if(detail){g.globalAlpha=clamp(night*1.4,0,.6);for(let y=0;y<N;y+=1)for(let x=(y%2);x<N;x+=2){const i=y*N+x;if(!vis[i]||!localRoad(i))continue;const [cx,cy]=center(x,y);g.beginPath();g.arc(cx+HW*.42,cy-2,3,0,7);g.fill();}}
     g.globalAlpha=1;}
+  drawGlows(t);
 }
 
 // =================== Icônes ===================
@@ -1178,6 +1274,7 @@ function home(){z=W<620?.85:1.1;centerOn(16,30.5);}
 function tapAt(sx,sy){
   const wx=(sx-ox)/z,wy=(sy-oy)/z;let best=null,bd=(14/z)**2+60;
   for(const h of hits){const d=(h.x-wx)**2+(h.y-wy)**2;if(d<bd){bd=d;best=h;}}
+  if(best&&best.e){const v=best.e,E=EMER[v.k];toast(E.n,v.patrol?'En patrouille dans le quartier.':v.stage==='go'?'Sirène hurlante, en route vers '+E.mission+' !':v.stage==='work'?'Sur place : '+E.work+'.':'Retour à la base.');return;}
   if(best){showCitizen(best.a);return;}
   showInfo(pickTile(sx,sy));
 }
@@ -1377,6 +1474,7 @@ function frame(now){
   if(followId){const ag=agents.find(x=>x.id===followId);if(!ag)followId=0;else{let fx,fy;if(ag.veh){const p=vehPos(ag.veh);fx=p.fx;fy=p.fy;}else{fx=ag.at%N+.5;fy=((ag.at/N)|0)+.5;}
     const tx=W/2-(fx-fy)*HW*z,ty=H/2-(fx+fy)*HH*z-40;ox+=(tx-ox)*Math.min(1,dt*4);oy+=(ty-oy)*Math.min(1,dt*4);}}
   render(now);
+  updateAudio(now);
   hudT+=dt;if(hudT>.25){hudT=0;hudN++;updHud();document.body.classList.toggle('sheet-open',!($('info').hidden&&$('citizen').hidden&&$('budget').hidden&&$('stats').hidden));}
   requestAnimationFrame(frame);
 }
@@ -1392,7 +1490,7 @@ function start(data){
   requestAnimationFrame(frame);
 }
 // Accès de test (console)
-window.VDP={get S(){return S},get stats(){return{pop,jc,ji,jo,happy,prodP,useP,prodW,useW,gcap,gprod,jamPct,riders,agents:agents.length,veh:veh.length,totalFlow,bridges,tunnels}},
+window.VDP={get veh(){return veh},get S(){return S},get stats(){return{pop,jc,ji,jo,happy,prodP,useP,prodW,useW,gcap,gprod,jamPct,riders,agents:agents.length,veh:veh.length,totalFlow,bridges,tunnels}},
   build(tl,x0,y0,x1,y1){const pt=tool;tool=tl;act={a:{x:x0,y:y0},b:{x:x1??x0,y:y1??y0},sx:0,sy:0};updatePlan();const ok=act.ok;applyPlan();tool=pt;return ok;},
   run(days){for(let d=0;d<days;d++){for(let k=0;k<12;k++)tick();S.day++;daily();}},setHour(h){S.hour=h;},center:centerOn,zoom(v){z=v;clampCam();}};
 window.claude?.hot?.snapshot?.(()=>({save:serialize()}));

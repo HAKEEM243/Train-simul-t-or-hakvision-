@@ -21,6 +21,7 @@ Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de constructio
 - **Finances** : impôts par type de zone, recettes et dépenses détaillées, emprunts, historique sur 60 jours.
 - **Réseaux** : électricité (charbon, éolien, solaire) et eau avec capacité, ordures (décharge qui se remplit, incinérateur).
 - **Services** : école, université, clinique, hôpital, commissariat, caserne (les incendies se propagent sans pompiers).
+- **Secours visibles** : voitures de police en patrouille et en intervention, camions de pompiers qui arrosent les incendies, ambulances ; gyrophares animés et sirènes sonores (bouton haut-parleur pour couper).
 - **Circulation simulée** : trajets domicile-travail calculés sur le réseau, embouteillages, vue trafic, bus et métro.
 - **Progression** du hameau à la mégapole (30 000 habitants), avec objectifs, primes et déblocages.
 
