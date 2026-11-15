@@ -26,6 +26,7 @@ Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de constructio
 - **Progression** du hameau à la **Mégalopole (100 000 habitants)**, avec objectifs et primes ; tout est disponible dès le début ; gratte-ciel de niveau 4.
 - **Trains** : voies ferrées (ponts et tunnels automatiques), gares, trains régionaux venant du sud et trains de banlieue entre gares, passages à niveau avec barrières et feux clignotants.
 - **Nouvelle ville** au choix : fleuve et montagnes, grande plaine, pays de montagnes ou île ; mode carrière ou **bac à sable** (argent illimité).
+- **Éditeur** (bouton clé à molette) : ajouter ou définir l'argent, argent illimité, tout faire grandir, pas d'incendies, nettoyer la ville, effacer les emprunts, pinceaux de terrain (eau, terre, montagne, forêt), heure, saison et météo.
 - **Mini-carte** pour se déplacer et **mode photo** sans interface.
 - **Grands bâtiments sur plusieurs cases** : stade (3×3), port de commerce au bord de l'eau (4×3, grues et cargos), aéroport (6×4, avions qui décollent et atterrissent).
 - **Quartiers** à dessiner et à nommer, avec leurs propres règles (gratte-ciel, zone piétonne, quartier vert, touristique, industrie interdite) et impôts locaux.

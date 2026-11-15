@@ -194,6 +194,7 @@ canvas.chart{width:100%;height:90px;display:block;margin-top:8px;background:var(
   <button class="fab" id="statBtn" aria-label="Habitants et statistiques"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 2 5 5"/></svg></button>
   <button class="fab" id="homeBtn" aria-label="Recentrer la carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
   <button class="fab" id="sndBtn" aria-label="Son des sirènes"></button>
+  <button class="fab" id="edBtn" aria-label="Éditeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></button>
   <button class="fab" id="miniBtn" aria-label="Mini-carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button>
   <button class="fab" id="photoBtn" aria-label="Mode photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
   <button class="fab" id="undoBtn" aria-label="Annuler la dernière construction" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
@@ -278,6 +279,30 @@ canvas.chart{width:100%;height:90px;display:block;margin-top:8px;background:var(
   <canvas id="miniC" width="360" height="190" style="width:180px;height:95px;display:block;border-radius:10px;touch-action:none;cursor:pointer" aria-label="Mini-carte : touchez pour vous y rendre"></canvas>
 </div>
 <button id="photoExit" class="btn primary" hidden style="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);z-index:10">Quitter le mode photo</button>
+
+<div class="sheet card" id="editor" hidden>
+  <button class="close" data-close="editor" aria-label="Fermer">✕</button>
+  <h2>Éditeur</h2><div class="sub">Modifiez la partie librement.</div>
+  <div class="h3">Argent</div>
+  <div class="actions" style="margin-top:6px"><button class="btn" data-money="10000">+10 000 €</button><button class="btn" data-money="100000">+100 000 €</button><button class="btn" data-money="1000000">+1 000 000 €</button></div>
+  <div class="taxrow" style="grid-template-columns:1fr auto;margin-top:8px"><input id="edMoney" class="nameIn" inputmode="numeric" style="font-size:16px" aria-label="Montant exact en euros"><button class="btn primary" id="edMoneySet">Définir</button></div>
+  <button class="pol" id="edSandbox" style="margin-top:8px"><div class="who"><b>Argent illimité</b><span>Construire sans jamais payer</span></div><span class="sw"></span></button>
+  <div class="h3">Ville</div>
+  <div class="list">
+    <button class="pol" id="edGrow"><div class="who"><b>Tout faire grandir maintenant</b><span>Toutes les zones montent au niveau maximum</span></div></button>
+    <button class="pol" id="edFireOff"><div class="who"><b>Pas d'incendies</b><span>Aucun bâtiment ne prend feu</span></div><span class="sw"></span></button>
+    <button class="pol" id="edClean"><div class="who"><b>Nettoyer la ville</b><span>Éteint les feux, ramasse les ordures, vide les décharges</span></div></button>
+    <button class="pol" id="edLoans"><div class="who"><b>Effacer les emprunts</b><span>Plus aucun remboursement</span></div></button>
+  </div>
+  <div class="h3">Terrain</div><div class="sub">Choisissez un pinceau puis glissez sur la carte.</div>
+  <div class="actions" style="margin-top:6px"><button class="btn" data-terr="tWater">Eau</button><button class="btn" data-terr="tLand">Terre</button><button class="btn" data-terr="tMount">Montagne</button><button class="btn" data-terr="tTrees">Forêt</button></div>
+  <div class="h3">Heure</div>
+  <div class="actions" style="margin-top:6px"><button class="btn" data-hour="7">Matin</button><button class="btn" data-hour="12.5">Midi</button><button class="btn" data-hour="19">Soir</button><button class="btn" data-hour="23">Nuit</button></div>
+  <div class="h3">Saison</div>
+  <div class="actions" style="margin-top:6px"><button class="btn" data-season="8">Printemps</button><button class="btn" data-season="24">Été</button><button class="btn" data-season="36">Automne</button><button class="btn" data-season="0">Hiver</button></div>
+  <div class="h3">Météo</div>
+  <div class="actions" style="margin-top:6px"><button class="btn" data-wx="sun">Soleil</button><button class="btn" data-wx="cloud">Nuages</button><button class="btn" data-wx="rain">Pluie</button><button class="btn" data-wx="storm">Orage</button><button class="btn" data-wx="snow">Neige</button></div>
+</div>
 
 <div class="sheet card" id="stats" hidden>
   <button class="close" data-close="stats" aria-label="Fermer">✕</button>
@@ -589,7 +614,7 @@ function tick(){
       if(fire[i]>16){fire[i]=0;if(isZone(ty))L[i]=0;else{T[i]=NONE;delete S.fill[i];}groundDirty=true;
         if(onScreen(i))puff(i,'#555',10);toast('Bâtiment détruit par le feu','Construisez une caserne de pompiers à proximité.',2);}
       else if(rnd()<.04){const x=i%N,y=(i/N)|0,j=pick([[x+1,y],[x-1,y],[x,y+1],[x,y-1]]);if(j[0]>=0&&j[1]>=0&&j[0]<N&&j[1]<N){const k=j[1]*N+j[0];if(isZone(T[k])&&L[k]&&!fire[k])fire[k]=1;}}
-    }else if(pop>=450&&isZone(ty)&&L[i]&&rnd()<(svF[i]?.00004:.00012)*wxFire()){fire[i]=1;if(!svF[i])toast('Incendie !','Un bâtiment brûle sans pompiers à proximité.',2);}
+    }else if(!S.noFire&&pop>=450&&isZone(ty)&&L[i]&&rnd()<(svF[i]?.00004:.00012)*wxFire()){fire[i]=1;if(!svF[i])toast('Incendie !','Un bâtiment brûle sans pompiers à proximité.',2);}
   }
   // bonheur
   let hs=0,hw=0;const acc={svc:0,env:0,traffic:0,garb:0,util:0,tax:0,jobs:0,crime:0};
@@ -1297,6 +1322,23 @@ function drawBarriers(i,x,y,cx,cy){
     const ex=closed?(px<cx?px+HW*.5:px-HW*.5):px,ey=closed?(alongX?py+(px<cx?HH*.35:-HH*.35)-6:py-6+(px<cx?-HH*.35:HH*.35)):py-24;
     g.lineWidth=2.4;g.setLineDash([3,3]);g.strokeStyle='#e5484d';g.beginPath();g.moveTo(px,py-6);g.lineTo(ex,ey);g.stroke();g.strokeStyle='#ffffff';g.lineDashOffset=3;g.beginPath();g.moveTo(px,py-6);g.lineTo(ex,ey);g.stroke();g.setLineDash([]);g.lineDashOffset=0;}
 }
+// =================== Éditeur ===================
+const E$=id=>document.getElementById(id);
+function fillEditor(){E$('edSandbox').classList.toggle('on',!!S.sandbox);E$('edFireOff').classList.toggle('on',!!S.noFire);if(document.activeElement!==E$('edMoney'))E$('edMoney').value=S.sandbox?'':Math.round(S.money);}
+E$('edBtn').addEventListener('click',()=>{const el=E$('editor'),h=el.hidden;closeSheets();el.hidden=!h;if(h)fillEditor();});
+document.querySelectorAll('[data-money]').forEach(b=>b.addEventListener('click',()=>{S.money+=+b.dataset.money;sfx('coin');fillEditor();updHud();}));
+E$('edMoneySet').addEventListener('click',()=>{const v=parseInt(String(E$('edMoney').value).replace(/[^0-9-]/g,''),10);if(isNaN(v)){toast('Montant invalide','Entrez un nombre, par exemple 500000.');return;}S.sandbox=false;S.money=v;sfx('coin');fillEditor();updHud();});
+E$('edMoney').addEventListener('keydown',e=>{if(e.key==='Enter')E$('edMoneySet').click();});
+E$('edSandbox').addEventListener('click',()=>{S.sandbox=!S.sandbox;if(!S.sandbox)S.money=Math.min(S.money,1e7);fillEditor();updHud();});
+E$('edFireOff').addEventListener('click',()=>{S.noFire=!S.noFire;if(S.noFire)fire.fill(0);fillEditor();});
+E$('edGrow').addEventListener('click',()=>{let n=0;for(let i=0;i<NN;i++){const ty=S.t[i];if(!isZone(ty))continue;const D=dRule(i),mx=D&&D.r.dense&&ty!==IN?4:3;if(S.lv[i]<mx){S.lv[i]=mx;n++;}}
+  groundDirty=true;computeMaps();totals();sfx('coin');toast('Ville agrandie',n+' bâtiment'+(n>1?'s':'')+' au niveau maximum.');});
+E$('edClean').addEventListener('click',()=>{fire.fill(0);gar.fill(0);for(const k in S.fill)S.fill[k]=0;computeMaps();toast('Ville nettoyée','Feux éteints, ordures ramassées, décharges vidées.');});
+E$('edLoans').addEventListener('click',()=>{S.loans=[];toast('Emprunts effacés','');});
+document.querySelectorAll('[data-terr]').forEach(b=>b.addEventListener('click',()=>{closeSheets();cat='hand';trayEl.hidden=true;tool=b.dataset.terr;markSel();}));
+document.querySelectorAll('[data-hour]').forEach(b=>b.addEventListener('click',()=>{S.hour=+b.dataset.hour;updHud();}));
+document.querySelectorAll('[data-season]').forEach(b=>b.addEventListener('click',()=>{const yr=Math.floor(S.day/48);S.day=yr*48+(+b.dataset.season);S.snow=+b.dataset.season===0?S.snow:0;groundDirty=true;updHud();}));
+document.querySelectorAll('[data-wx]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.wx;S.wx={k,temp:k==='snow'?-3:k==='sun'?24:k==='storm'?19:14};if(k==='snow')S.snow=1;else if(S.snow&&S.wx.temp>2)S.snow=0;groundDirty=true;computeMaps();updHud();}));
 // =================== Nouvelle ville, mini-carte, mode photo ===================
 const TERRAINS=[['fleuve','Fleuve et montagnes','Une rivière à franchir et deux massifs'],['plaine','Grande plaine','Beaucoup de place, une petite rivière'],['montagne','Pays de montagnes','Des massifs partout : tunnels garantis'],['ile','Île','Une île entourée d\'eau, idéale pour un port']];
 const MODES=[['carriere','Carrière','30 000 € pour commencer, il faut gérer son budget'],['sandbox','Bac à sable','Argent illimité, tout construire librement']];
@@ -1717,6 +1759,7 @@ function updateHint(){
   else if(tool==='bull')h='Glissez sur une zone à démolir · '+pan;
   else if(tool===RB)h='Touchez un carrefour existant · '+pan;
   else if(tool==='dpaint')h=(S.districts[dcur-1]?'Glissez pour agrandir « '+S.districts[dcur-1].n+' »':'Glissez sur la carte pour dessiner un nouveau quartier')+' · retouchez le quartier choisi pour ses règles';
+  else if(isTerrTool(tool))h='Pinceau '+{tWater:'eau (crée des lacs et rivières)',tLand:'terre (assèche ou aplanit)',tMount:'montagne',tTrees:'forêt'}[tool]+' · glissez sur la carte · touchez « Voir » pour arrêter';
   else if(tool==='derase')h='Glissez pour retirer des cases d\'un quartier · '+pan;
   else if(DEF[tool]&&DEF[tool].sz)h=DEF[tool].d+' · touchez le centre de l\'emplacement';
   else if(isRoadT(tool))h='Glissez pour tracer · ponts et tunnels automatiques sur l\'eau et la montagne';
@@ -1752,7 +1795,8 @@ function canPlace(tl,i){
   if(cur===NONE||cur===TREE||(isZone(cur)&&!lv))return{ok:1,cost:DEF[tl].cost+(cur===TREE?5:0)};
   return{ok:0,cost:0};
 }
-const rectTool=tl=>tl==='bull'||tl===PARK||tl===TREE||tl==='dpaint'||tl==='derase'||isZone(tl);
+const isTerrTool=tl=>tl==='tWater'||tl==='tLand'||tl==='tMount'||tl==='tTrees';
+const rectTool=tl=>isTerrTool(tl)||tl==='bull'||tl===PARK||tl===TREE||tl==='dpaint'||tl==='derase'||isZone(tl);
 function planTiles(a,b){
   const out=[];
   if((isRoadT(tool)&&tool!==RB)||tool===RAIL){const dx=b.x-a.x,dy=b.y-a.y,sx=Math.sign(dx),sy=Math.sign(dy);let x=a.x,y=a.y;out.push({x,y});
@@ -1765,6 +1809,8 @@ function planTiles(a,b){
 function updatePlan(){
   const tip=document.getElementById('tip');
   if(!act){tip.hidden=true;return;}
+  if(isTerrTool(tool)){const tiles=planTiles(act.a,act.b);for(const p of tiles){const ty=S.t[p.y*N+p.x];p.ok=!(isBld(ty)||(isZone(ty)&&S.lv[p.y*N+p.x]));p.skip=0;}act.tiles=tiles;act.ok=true;act.cost=0;act.n=tiles.length;act.r=0;
+    tip.hidden=false;tip.classList.remove('no');tip.textContent={tWater:'Eau',tLand:'Terre',tMount:'Montagne',tTrees:'Forêt'}[tool]+' · '+tiles.length+' case'+(tiles.length>1?'s':'');tip.style.left=act.sx+'px';tip.style.top=act.sy+'px';return;}
   if(tool==='dpaint'||tool==='derase'){const tiles=planTiles(act.a,act.b);for(const p of tiles){p.ok=1;p.skip=0;}act.tiles=tiles;act.ok=true;act.cost=0;act.n=tiles.length;act.r=0;
     const D=S.districts[dcur-1];tip.hidden=false;tip.classList.remove('no');tip.textContent=(tool==='derase'?'Retirer du quartier':(D?D.n:'Nouveau quartier'))+' · '+tiles.length+' case'+(tiles.length>1?'s':'');tip.style.left=act.sx+'px';tip.style.top=act.sy+'px';return;}
   const BZ=DEF[tool]&&DEF[tool].sz;
@@ -1790,6 +1836,12 @@ function updatePlan(){
 function applyPlan(){
   document.getElementById('tip').hidden=true;
   if(!act||!act.tiles)return;
+  if(isTerrTool(tool)){for(const p of act.tiles){if(!p.ok)continue;const i=p.y*N+p.x,ty=S.t[i];
+      if(tool==='tWater'){S.terr[i]=WATER;S.el[i]=0;if(!isRoadT(ty)&&ty!==RAIL){S.t[i]=NONE;S.lv[i]=0;}}
+      else if(tool==='tLand'){S.terr[i]=PLAIN;S.el[i]=0;}
+      else if(tool==='tMount'){S.terr[i]=MOUNT;S.el[i]=1+(((p.x*7+p.y*3)%3));if(!isRoadT(ty)&&ty!==RAIL){S.t[i]=NONE;S.lv[i]=0;}}
+      else if(tool==='tTrees'&&S.terr[i]===PLAIN&&(ty===NONE||(isZone(ty)&&!S.lv[i]))){S.t[i]=TREE;S.vr[i]=rnd()*256|0;}}
+    groundDirty=true;computeMaps();totals();sfx('build');act=null;return;}
   if(tool==='dpaint'||tool==='derase'){if(tool==='dpaint'&&!S.districts[dcur-1])dcur=newDistrict();const v=tool==='derase'?0:dcur;for(const p of act.tiles)S.dist[p.y*N+p.x]=v;distDirty=true;groundDirty=true;sfx('build');act=null;if(cat==='dist')buildTray();return;}
   if(act.big&&act.ok){const {ax,ay}=act.big,BZ=DEF[tool].sz,rec={cost:act.cost,tiles:[]};
     for(let yy=0;yy<BZ[1];yy++)for(let xx=0;xx<BZ[0];xx++){const i=(ay+yy)*N+ax+xx;rec.tiles.push({i,t:S.t[i],lv:S.lv[i],f:S.fill[i]});S.t[i]=xx||yy?PART:tool;S.lv[i]=0;fire[i]=0;puff(i,'#ffffff',2);}
@@ -1862,7 +1914,7 @@ window.addEventListener('keydown',e=>{
 
 // =================== Panneaux ===================
 const $=id=>document.getElementById(id);
-function closeSheets(except){for(const id of ['info','citizen','budget','stats','district','newgame','mini'])if(id!==except)$(id).hidden=true;$('views').hidden=true;}
+function closeSheets(except){for(const id of ['info','citizen','budget','stats','district','newgame','mini','editor'])if(id!==except)$(id).hidden=true;$('views').hidden=true;}
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>{$(b.dataset.close).hidden=true;}));
 const yes='<span class="pos">oui</span>',no='<span class="neg">non</span>';
 let infoTile=-1;
@@ -2036,10 +2088,10 @@ let hudN=0;
 const enc=a=>{let s='';for(let i=0;i<a.length;i++)s+=String.fromCharCode(48+a[i]);return s;};
 const dec=s=>{const a=new Uint8Array(NN);for(let i=0;i<NN;i++)a[i]=s.charCodeAt(i)-48;return a;};
 const encHex=a=>{let s='';for(let i=0;i<a.length;i++)s+=(a[i]<16?'0':'')+a[i].toString(16);return s;};
-function serialize(){return JSON.stringify({v:2,terr:enc(S.terr),t:enc(S.t),lv:enc(S.lv),el:enc(S.el),vr:encHex(S.vr),entries:S.entries,money:S.money,day:S.day,hour:S.hour,tax:S.tax,speed:S.speed,obj:S.obj,rank:S.rank,maxPop:S.maxPop,fill:S.fill,loans:S.loans,hist:S.hist,wx:S.wx,snow:S.snow,pol:S.pol,dist:enc(S.dist),districts:S.districts,bigv:1,railEntries:S.railEntries,sandbox:S.sandbox,terrain:S.terrain,feed:S.feed.slice(0,25),cam:[ox,oy,z]});}
+function serialize(){return JSON.stringify({v:2,terr:enc(S.terr),t:enc(S.t),lv:enc(S.lv),el:enc(S.el),vr:encHex(S.vr),entries:S.entries,money:S.money,day:S.day,hour:S.hour,tax:S.tax,speed:S.speed,obj:S.obj,rank:S.rank,maxPop:S.maxPop,fill:S.fill,loans:S.loans,hist:S.hist,wx:S.wx,snow:S.snow,pol:S.pol,noFire:S.noFire,dist:enc(S.dist),districts:S.districts,bigv:1,railEntries:S.railEntries,sandbox:S.sandbox,terrain:S.terrain,feed:S.feed.slice(0,25),cam:[ox,oy,z]});}
 function deserialize(str){
   const o=JSON.parse(str);if(!o||o.v!==2||o.t.length!==NN)return null;const vr=new Uint8Array(NN);for(let i=0;i<NN;i++)vr[i]=parseInt(o.vr.substr(i*2,2),16);
-  return{v:2,terr:dec(o.terr),t:dec(o.t),lv:dec(o.lv),el:dec(o.el),vr,entries:o.entries,money:o.money,day:o.day,hour:o.hour??7,tax:o.tax,speed:o.speed??1,obj:o.obj,rank:o.rank,maxPop:o.maxPop,fill:o.fill||{},loans:o.loans||[],hist:o.hist||[],wx:o.wx||{k:'sun',temp:10},snow:o.snow||0,pol:o.pol||{},dist:o.dist?dec(o.dist):new Uint8Array(NN),districts:o.districts||[],bigv:o.bigv||0,railEntries:o.railEntries,sandbox:!!o.sandbox,terrain:o.terrain||'fleuve',feed:o.feed||[],cam:o.cam};
+  return{v:2,terr:dec(o.terr),t:dec(o.t),lv:dec(o.lv),el:dec(o.el),vr,entries:o.entries,money:o.money,day:o.day,hour:o.hour??7,tax:o.tax,speed:o.speed??1,obj:o.obj,rank:o.rank,maxPop:o.maxPop,fill:o.fill||{},loans:o.loans||[],hist:o.hist||[],wx:o.wx||{k:'sun',temp:10},snow:o.snow||0,pol:o.pol||{},noFire:!!o.noFire,dist:o.dist?dec(o.dist):new Uint8Array(NN),districts:o.districts||[],bigv:o.bigv||0,railEntries:o.railEntries,sandbox:!!o.sandbox,terrain:o.terrain||'fleuve',feed:o.feed||[],cam:o.cam};
 }
 function save(){try{localStorage.setItem(SAVE_KEY,serialize());}catch(e){}}
 setInterval(save,15000);document.addEventListener('visibilitychange',()=>{if(document.hidden)save();});window.addEventListener('pagehide',save);
@@ -2060,7 +2112,7 @@ function frame(now){
     const tx=W/2-(fx-fy)*HW*z,ty=H/2-(fx+fy)*HH*z-40;ox+=(tx-ox)*Math.min(1,dt*4);oy+=(ty-oy)*Math.min(1,dt*4);}}
   render(now);
   updateAudio(now);
-  hudT+=dt;if(hudT>.25){hudT=0;hudN++;updHud();document.body.classList.toggle('sheet-open',!($('info').hidden&&$('citizen').hidden&&$('budget').hidden&&$('stats').hidden&&$('district').hidden));}
+  hudT+=dt;if(hudT>.25){hudT=0;hudN++;updHud();document.body.classList.toggle('sheet-open',!($('info').hidden&&$('citizen').hidden&&$('budget').hidden&&$('stats').hidden&&$('district').hidden&&$('editor').hidden));}
   requestAnimationFrame(frame);
 }
 function newCity(opts){S=gen(opts);trains=[];rebuildAnc(false);dcur=0;distDirty=true;planes=[];ships=[];lineSig='';lines=[];undoStack.length=0;updUndo();drops=[];veh=[];peds=[];parts=[];agents=[];gar.fill(0);fire.fill(0);flow.fill(0);cong.fill(0);tq=null;happy=60;computeMaps();totals();groundDirty=true;buildTabs();selectCat('hand');home();}
