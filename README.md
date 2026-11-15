@@ -24,6 +24,9 @@ Le dossier [`ville/`](ville/) contient **Ville de Poche**, un jeu de constructio
 - **Secours visibles** : voitures de police en patrouille et en intervention, camions de pompiers qui arrosent les incendies, ambulances ; gyrophares animés et sirènes sonores (bouton haut-parleur pour couper).
 - **Circulation simulée** : trajets domicile-travail calculés sur le réseau, embouteillages, vue trafic, bus et métro.
 - **Progression** du hameau à la **Mégalopole (100 000 habitants)**, avec objectifs et primes ; tout est disponible dès le début ; gratte-ciel de niveau 4.
+- **Trains** : voies ferrées (ponts et tunnels automatiques), gares, trains régionaux venant du sud et trains de banlieue entre gares, passages à niveau avec barrières et feux clignotants.
+- **Nouvelle ville** au choix : fleuve et montagnes, grande plaine, pays de montagnes ou île ; mode carrière ou **bac à sable** (argent illimité).
+- **Mini-carte** pour se déplacer et **mode photo** sans interface.
 - **Grands bâtiments sur plusieurs cases** : stade (3×3), port de commerce au bord de l'eau (4×3, grues et cargos), aéroport (6×4, avions qui décollent et atterrissent).
 - **Quartiers** à dessiner et à nommer, avec leurs propres règles (gratte-ciel, zone piétonne, quartier vert, touristique, industrie interdite) et impôts locaux.
 - **Feux tricolores** (vert, orange, rouge) à chaque carrefour : les voitures s'arrêtent et font la queue, les secours passent au rouge, le rond-point supprime l'attente.
